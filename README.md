@@ -4,7 +4,9 @@ This is a PIU emulator for the GBA that uses [StepMania](https://github.com/step
 
 ![demo1](https://i.imgur.com/wUaksOH.gif)![demo2](https://i.imgur.com/DoPl7f8.gif)![demo3](https://i.imgur.com/GwQBOF8.gif)![demo4](https://i.imgur.com/Hm3NTLu.gif)![demo5](https://i.imgur.com/1zMgPgT.gif)![demo6](https://i.imgur.com/Pn6S5qC.gif)![demo7](https://i.imgur.com/w9kHpLr.gif)![demo8](https://i.imgur.com/WpUiynZ.gif)![demo9](https://i.imgur.com/LdTN37Z.gif)![demo10](https://i.imgur.com/BITyzuF.gif)![demo11](https://i.imgur.com/gXFk671.gif)![demo12](https://i.imgur.com/vDletif.gif)
 
-Created by [[r]labs](https://r-labs.io).
+<img alt="rlabs" width="16" height="16" src="https://user-images.githubusercontent.com/1631752/116227197-400d2380-a72a-11eb-9e7b-389aae76f13e.png" /> Created by [[r]labs](https://r-labs.io).
+
+<img alt="discord" width="16" height="16" src="https://user-images.githubusercontent.com/1631752/116226650-a180c280-a729-11eb-8ae2-be2745d40481.png" /> Join our [Discord server](https://discord.com/invite/JE33cc2) to find pre-built ROMs and user-created content!
 
 ## Key features
 
@@ -176,6 +178,12 @@ rm -rf cmake-build-debug ; mkdir cmake-build-debug ; cd cmake-build-debug ; cmak
 ```
 
 ### Troubleshooting
+
+#### How to debug
+
+- In `Makefile`, replace `-Ofast` by `-Og -g` to include debug symbols in the `.elf` file
+- In mGBA, go to Tools -> Start GDB server...
+- Start debugging in VS Code
 
 #### Undefined reference to *function name*
 

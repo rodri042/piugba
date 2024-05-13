@@ -59,7 +59,8 @@ typedef struct __attribute__((__packed__)) {
   s8 customOffsets[CUSTOM_OFFSET_TABLE_SIZE];
 } SaveFile;
 
-#define SRAM ((SaveFile*)sram_mem)
+extern SaveFile savefileRAM;
+#define SRAM ((SaveFile*)&savefileRAM)
 
 #define SAVEFILE_read8(TARGET) (*((vu8*)&TARGET))
 #define SAVEFILE_write8(DEST, VALUE) *((vu8*)&DEST) = VALUE;

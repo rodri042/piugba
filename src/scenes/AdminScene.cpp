@@ -8,7 +8,7 @@
 #include "scenes/StartScene.h"
 #include "utils/SceneUtils.h"
 
-#define TITLE "ADMIN MENU (v1.10.0)"
+#define TITLE "ADMIN MENU (v1.10.0) [EZFO]"
 #define SUBMENU_RUMBLE 0
 #define SUBMENU_OFFSETS 1
 #define SUBMENU_RESET 2

@@ -202,6 +202,12 @@ void SongScene::tick(u16 keys) {
       return;  // (*) = (onAbort, onStagePass, onStageBreak)
   }
 
+  if (syncer->$resetFlag) {
+    syncer->$resetFlag = false;
+    onAbort();
+    return;
+  }
+
   bool isNewBeat = chartReaders[localPlayerId]->update((int)songMsecs);  // (*)
   if (engine->isTransitioning())
     return;  // (*) = (onStageBreak)

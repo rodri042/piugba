@@ -5,6 +5,7 @@
 
 #include "../libs/interrupt.h"
 #include "DanceGradeScene.h"
+#include "DeathMixScene.h"
 #include "SelectionScene.h"
 #include "StageBreakScene.h"
 #include "TalkScene.h"
@@ -877,8 +878,13 @@ void SongScene::onStagePass() {
 
 void SongScene::onAbort() {
   unload();
-  engine->transitionIntoScene(new SelectionScene(engine, fs),
-                              new PixelTransitionEffect());
+
+  if (deathMix != NULL)
+    engine->transitionIntoScene(new DeathMixScene(engine, fs),
+                                new PixelTransitionEffect());
+  else
+    engine->transitionIntoScene(new SelectionScene(engine, fs),
+                                new PixelTransitionEffect());
 }
 
 void SongScene::breakStage() {

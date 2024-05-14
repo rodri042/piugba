@@ -112,6 +112,7 @@ void SelectionScene::load() {
   }
 
   SAVEFILE_write8(SRAM->state.isPlaying, false);
+  syncer->$resetFlag = false;
   SCENE_init();
 
   TextStream::instance().scrollNow(0, TEXT_SCROLL_NORMAL);

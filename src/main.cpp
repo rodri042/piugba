@@ -116,12 +116,12 @@ CODE_EWRAM void ISR_reset() {
   if (syncer->isPlaying())
     return;
 
-  if (!flashcartio_is_reading) {
-    if (isPlaying) {
-      syncer->$resetFlag = true;
-      return;
-    }
+  if (isPlaying) {
+    syncer->$resetFlag = true;
+    return;
+  }
 
+  if (!flashcartio_is_reading) {
     // EWRAM -> SRAM
     REG_IME = 0;
     REG_RCNT |= 1 << 15;  // (disable link cable)

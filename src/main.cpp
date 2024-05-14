@@ -51,7 +51,8 @@ int main() {
 
   linkUniversal->deactivate();
 
-  REG_WAITCNT = 0x4317;  // (3,1 waitstates, prefetch ON)
+  // REG_WAITCNT = 0x4317;  // (3,1 waitstates, prefetch ON)
+  REG_WAITCNT = 0x4307;  // (3,2 waitstates, prefetch ON)
 
   validateBuild();
   setUpInterrupts();

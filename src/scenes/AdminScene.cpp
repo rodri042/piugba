@@ -8,7 +8,7 @@
 #include "scenes/StartScene.h"
 #include "utils/SceneUtils.h"
 
-#define TITLE "ADMIN MENU (v1.10.0) [EZFO]"
+#define TITLE "ADMIN MENU (v1.10.0)"
 #define SUBMENU_RUMBLE 0
 #define SUBMENU_OFFSETS 1
 #define SUBMENU_RESET 2
@@ -120,6 +120,7 @@ void AdminScene::printOptions() {
   }
 
   SCENE_write(TITLE, 1);
+  SCENE_write("[EZFO]", 2);
 
   u8 navigationStyle = SAVEFILE_read8(SRAM->adminSettings.navigationStyle);
   u8 rumble = SAVEFILE_read8(SRAM->adminSettings.rumble);

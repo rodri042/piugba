@@ -107,7 +107,9 @@ int main() {
 }
 
 CODE_EWRAM void ISR_reset() {
-  if (syncer->$isPlayingSong || syncer->$resetFlag) {
+  bool isPlaying = SAVEFILE_read8(SRAM->state.isPlaying);
+
+  if (syncer->$isPlayingSong || (syncer->$resetFlag && isPlaying)) {
     syncer->$resetFlag = true;
     return;
   }
@@ -115,8 +117,8 @@ CODE_EWRAM void ISR_reset() {
     return;
 
   if (!flashcartio_is_reading) {
-    bool isPlaying = SAVEFILE_read8(SRAM->state.isPlaying);
     if (isPlaying) {
+      SAVEFILE_write8(SRAM->state.isPlaying, false);
       syncer->$resetFlag = true;
       return;
     }

@@ -118,7 +118,6 @@ CODE_EWRAM void ISR_reset() {
 
   if (!flashcartio_is_reading) {
     if (isPlaying) {
-      SAVEFILE_write8(SRAM->state.isPlaying, false);
       syncer->$resetFlag = true;
       return;
     }

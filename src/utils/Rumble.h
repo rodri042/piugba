@@ -7,15 +7,28 @@
 #define IO_DATA ((u8*)0x80000C4)
 
 inline void RUMBLE_start() {
-  *IO_DATA = (*IO_DATA) | 0b1000;  // I/O bit 3 => HIGH
+  *(vu16*)0x09FE0000 = 0xd200;
+  *(vu16*)0x08000000 = 0x1500;
+  *(vu16*)0x08020000 = 0xd200;
+  *(vu16*)0x08040000 = 0x1500;
+  *(vu16*)0x09E20000 = 0x7;
+  *(vu16*)0x09FC0000 = 0x1500;
+
+  *(vu16*)0x08001000 = 0x2;
 }
 
 inline void RUMBLE_stop() {
-  *IO_DATA = (*IO_DATA) & 0b11110111;  // I/O bit 3 => LOW
+  *(vu16*)0x09FE0000 = 0xd200;
+  *(vu16*)0x08000000 = 0x1500;
+  *(vu16*)0x08020000 = 0xd200;
+  *(vu16*)0x08040000 = 0x1500;
+  *(vu16*)0x09E20000 = 0x8;
+  *(vu16*)0x09FC0000 = 0x1500;
+
+  *(vu16*)0x08001000 = 0x0;
 }
 
 inline void RUMBLE_init() {
-  *IO_DIRECTION = (*IO_DIRECTION) | 0b1000;  // I/O bit 3 => OUTPUT
   RUMBLE_stop();
 }
 

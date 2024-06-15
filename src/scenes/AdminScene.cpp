@@ -120,6 +120,7 @@ void AdminScene::printOptions() {
   }
 
   SCENE_write(TITLE, 1);
+  SCENE_write("[EZF3I1: RUMBLE]", 2);
 
   u8 navigationStyle = SAVEFILE_read8(SRAM->adminSettings.navigationStyle);
   u8 rumble = SAVEFILE_read8(SRAM->adminSettings.rumble);

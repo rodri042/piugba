@@ -120,6 +120,7 @@ void AdminScene::printOptions() {
   }
 
   SCENE_write(TITLE, 1);
+  SCENE_write("[IOBLINK: CUSTOM]", 2);
 
   u8 navigationStyle = SAVEFILE_read8(SRAM->adminSettings.navigationStyle);
   u8 rumble = SAVEFILE_read8(SRAM->adminSettings.rumble);
@@ -137,7 +138,7 @@ void AdminScene::printOptions() {
               : rumble == 2 ? "I/O SC"
                             : "CARTRIDGE",
               6);
-  printOption(OPTION_IO_BLINK, "I/O SD blink",
+  printOption(OPTION_IO_BLINK, "I/O blink",
               ioBlink == 1   ? "ON BEAT"
               : ioBlink == 2 ? "ON KEY"
                              : "OFF",

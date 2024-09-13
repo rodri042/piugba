@@ -15,12 +15,24 @@ inline void IOPORT_sdHigh() {
   REG_RCNT |= 0b10;
 }
 
+inline void IOPORT_left() {  // (SO)
+  REG_RCNT |= 0b1000;
+}
+
+inline void IOPORT_right() {  // (SD)
+  REG_RCNT |= 0b10;
+}
+
+inline void IOPORT_top() {  // (SC)
+  REG_RCNT |= 0b1;
+}
+
 inline void IOPORT_sdLow() {
-  REG_RCNT &= 0b1111111111111101;
+  REG_RCNT &= 0b1111111111110100;
 }
 
 inline void IOPORT_low() {
-  REG_RCNT &= 0b1111111111111100;
+  REG_RCNT &= 0b1111111111110100;
 }
 
 #endif  // IOPORT_H

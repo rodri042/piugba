@@ -533,10 +533,16 @@ void SongScene::updateBlink() {
 
   if (!$isMultiplayer &&
       GameState.adminSettings.ioBlink == IOBlinkOpts::IO_BLINK_ON_BEAT) {
-    if (blinkFrame >= ALPHA_BLINK_LEVEL - IO_BLINK_TIME)
-      IOPORT_sdHigh();
-    else
-      IOPORT_sdLow();
+    if (blinkFrame >= ALPHA_BLINK_LEVEL - IO_BLINK_TIME) {
+      IOPORT_low();
+      if (blinkFrame < (ALPHA_BLINK_LEVEL - IO_BLINK_TIME) + 2) {
+        IOPORT_left();
+      } else if (blinkFrame < (ALPHA_BLINK_LEVEL - IO_BLINK_TIME) + 4) {
+        IOPORT_top();
+      } else
+        IOPORT_right();
+    } else
+      IOPORT_low();
   }
 }
 
@@ -783,10 +789,17 @@ void SongScene::processKeys(u16 keys) {
 
   if (!$isMultiplayer &&
       GameState.adminSettings.ioBlink == IOBlinkOpts::IO_BLINK_ON_KEY) {
-    if (KEY_ANY_ARROW(keys))
-      IOPORT_sdHigh();
-    else
-      IOPORT_sdLow();
+    if (KEY_ANY_ARROW(keys)) {
+      IOPORT_low();
+
+      if (KEY_UPLEFT(keys) || KEY_DOWNLEFT(keys))
+        IOPORT_left();
+      if (KEY_CENTER(keys))
+        IOPORT_top();
+      if (KEY_UPRIGHT(keys) || KEY_DOWNRIGHT(keys))
+        IOPORT_right();
+    } else
+      IOPORT_low();
   }
 
   if (GameState.mods.trainingMode != TrainingModeOpts::tOFF) {

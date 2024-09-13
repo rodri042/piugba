@@ -318,7 +318,7 @@ class LinkSPI {
     //                   (1 << BIT_GENERAL_PURPOSE_HIGH);
 
     // [!]
-    Link::_REG_RCNT = (1 << 15) | 0b100110000;
+    Link::_REG_RCNT = (1 << 15) | 0b110110000;
     Link::_REG_SIOCNT = 0;
   }
 

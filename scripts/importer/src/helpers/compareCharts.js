@@ -11,7 +11,7 @@ const UPDATE_DIRECTORY = "./src/data/content/INSERT_UPDATE_DIRECTORY";
 
 global.GLOBAL_OPTIONS = {
   mode: "auto",
-  arcade: false,
+  arcade: true,
   directory: UPDATE_DIRECTORY,
   boss: true,
 };
@@ -34,6 +34,7 @@ function read(packPath) {
     .sortBy()
     .filter((it) => it.isDirectory())
     .map("name")
+    .filter((it) => !it.startsWith("_"))
     .map((directory) => {
       const name = directory;
 

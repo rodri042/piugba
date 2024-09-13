@@ -3,7 +3,7 @@
 
 #include <libgba-sprite-engine/sprites/sprite.h>
 
-enum InstructorType { Girl, Boy, AngryGirl };
+enum InstructorType { Girl, AngryGirl2, AngryGirl1 };
 
 class Instructor {
  public:

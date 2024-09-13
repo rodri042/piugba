@@ -19,8 +19,9 @@ class Background {
              int mapSize,
              int screenBlockIndex,
              int charBlockIndex,
-             int mapLayout)
-      : Background(bgIndex, data, size, map, mapSize) {
+             int mapLayout,
+             bool lz77)
+      : Background(bgIndex, data, size, map, mapSize, lz77) {
     this->screenBlockIndex = screenBlockIndex;
     this->charBlockIndex = charBlockIndex;
     this->mapLayout = mapLayout;
@@ -30,7 +31,8 @@ class Background {
              const void* data,
              int size,
              const void* map,
-             int mapSize)
+             int mapSize,
+             bool lz77 = false)
       : data(data),
         bgIndex(bgIndex),
         size(size),
@@ -39,7 +41,8 @@ class Background {
         screenBlockIndex(0),
         charBlockIndex(bgIndex),
         priority(bgIndex),
-        mapSize(mapSize) {}
+        mapSize(mapSize),
+        lz77(lz77) {}
 
   const int getScreenBlock() { return screenBlockIndex; }
   const int getCharBlock() { return charBlockIndex; }
@@ -69,6 +72,7 @@ class Background {
   int mapSize, mapLayout;
   int screenBlockIndex, charBlockIndex, priority;
   bool mosaicEnabled = false;
+  bool lz77 = false;
   int scrollX = 0;
   int scrollY = 0;
 

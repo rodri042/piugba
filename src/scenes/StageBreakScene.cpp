@@ -74,9 +74,13 @@ void StageBreakScene::load() {
   EFFECT_setBlendAlpha(TEXT_BLEND_ALPHA);
 
   instructor = std::unique_ptr<Instructor>{
-      new Instructor(InstructorType::AngryGirl, INSTRUCTOR_X, INSTRUCTOR_Y)};
+      new Instructor(SAVEFILE_isUsingModernTheme() ? InstructorType::AngryGirl2
+                                                   : InstructorType::AngryGirl1,
+                     INSTRUCTOR_X, INSTRUCTOR_Y)};
   instructor->get()->setDoubleSize(true);
   instructor->get()->setAffineId(AFFINE_BASE);
+
+  updateStats();
 }
 
 void StageBreakScene::tick(u16 keys) {
@@ -138,6 +142,11 @@ void StageBreakScene::setUpBackground() {
   bg->setMosaic(true);
 }
 
+void StageBreakScene::updateStats() {
+  u32 breaks = SAVEFILE_read32(SRAM->stats.stageBreaks);
+  SAVEFILE_write32(SRAM->stats.stageBreaks, breaks + 1);
+}
+
 void StageBreakScene::animate() {
   u32 msecs = PlaybackState.msecs;
   u32 totalSteps = 0;
@@ -146,6 +155,7 @@ void StageBreakScene::animate() {
 
   TextStream::instance().setFontColor(msecs >= 2110 ? TEXT_COLOR_END
                                                     : TEXT_COLOR_START);
+  TextStream::instance().setFontSubcolor(text_bg_palette_default_subcolor);
 
   WRITE(1500, "H", heyRow, heyCol + 0, -1, 2, 228, 228);
   WRITE(1525, "e", heyRow, heyCol + 1, 3, -3, 205, -205);
@@ -172,8 +182,11 @@ void StageBreakScene::finish() {
   player_stop();
 
   if (SAVEFILE_getGameMode() == GameMode::DEATH_MIX) {
-    engine->transitionIntoScene(new DeathMixScene(engine, fs),
-                                new PixelTransitionEffect());
+    bool isShuffleMode =
+        ENV_ARCADE || (SAVEFILE_read8(SRAM->isShuffleMode) == 1);
+    engine->transitionIntoScene(
+        new DeathMixScene(engine, fs, static_cast<MixMode>(isShuffleMode)),
+        new PixelTransitionEffect());
   } else {
     engine->transitionIntoScene(new SelectionScene(engine, fs),
                                 new PixelTransitionEffect());

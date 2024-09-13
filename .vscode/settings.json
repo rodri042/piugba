@@ -79,6 +79,8 @@
 		"audio_store.h": "c",
 		"stdbool.h": "c",
 		"sys.h": "c",
-		"io_ezfo.h": "c"
-	}
+		"io_ezfo.h": "c",
+		"cstring": "cpp"
+	},
+	"makefile.configureOnOpen": false
 }

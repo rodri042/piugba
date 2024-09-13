@@ -8,7 +8,8 @@ enum ButtonType {
   GRAY,
   ORANGE,
   LEVEL_METER,
-  SUB_BUTTON,
+  SUB_BUTTON_BLUE,
+  SUB_BUTTON_GRAY,
   SUB_BUTTON_ORANGE
 };
 

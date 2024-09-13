@@ -1,11 +1,28 @@
 {
   "extensions.ignoreRecommendations": false,
   "terminal.integrated.profiles.windows": {
+    "Git Bash (MINGW64)": {
+        "path": [
+            "C:\\Program Files\\Git\\bin\\bash.exe"
+        ],
+        "args": [
+            "--login",
+            "-i"
+        ],
+        "icon": "terminal-bash"
+    },
     "Git Bash": {
         "source": "Git Bash"
+    },
+    "Ubuntu (WSL)": {
+        "path": "C:\\WINDOWS\\System32\\wsl.exe",
+        "args": [
+            "-d",
+            "Ubuntu"
+        ]
     }
   },
-  "terminal.integrated.defaultProfile.windows": "Git Bash",
+  "terminal.integrated.defaultProfile.windows": "Git Bash (MINGW64)",
   "window.zoomLevel": 1,
   "C_Cpp.clang_format_style": "{ BasedOnStyle: Chromium }",
   "editor.formatOnSave": true,

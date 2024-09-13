@@ -33,6 +33,10 @@ extern "C" {
 
 enum InitialLevel { KEEP_LEVEL, FIRST_LEVEL, LAST_LEVEL };
 
+#define NUMERIC_LEVEL_BADGE_MARGIN (8 * (((3))))
+#define NUMERIC_LEVEL_BADGE_SEPARATOR "    "
+#define NUMERIC_LEVEL_BADGE_SEPARATOR_MINUS_ONE_SPACE "   "
+
 class SelectionScene : public Scene {
  public:
   SelectionScene(std::shared_ptr<GBAEngine> engine,
@@ -52,8 +56,6 @@ class SelectionScene : public Scene {
   std::unique_ptr<PixelBlink> pixelBlink;
   const GBFS_FILE* fs;
   InitialLevel initialLevel;
-  std::string pendingAudio = "";
-  u32 pendingSeek = 0;
   u32 animationFrame = 0;
 
   std::unique_ptr<Library> library;
@@ -67,9 +69,10 @@ class SelectionScene : public Scene {
   std::unique_ptr<NumericProgress> progress;
   std::unique_ptr<InputHandler> settingsMenuInput;
   std::unique_ptr<Button> numericLevelBadge;
+  std::unique_ptr<Button> remoteNumericLevelBadge;
   std::unique_ptr<Explosion> loadingIndicator1;
   std::unique_ptr<Explosion> loadingIndicator2;
-  std::vector<u8> numericLevels;
+  std::vector<u32> numericLevels;
   u32 page = 0;
   u32 selected = 0;
   u32 count = 0;
@@ -81,8 +84,14 @@ class SelectionScene : public Scene {
 
   inline void playNow(const char* name) {
     player_play(name, isMultiplayer() || active_flashcart == EZ_FLASH_OMEGA);
-    pendingAudio = "";
-    pendingSeek = 0;
+    syncer->pendingAudio = "";
+    syncer->pendingSeek = 0;
+  }
+
+  inline void stop() {
+    player_stop();
+    syncer->pendingAudio = "";
+    syncer->pendingSeek = 0;
   }
 
   inline SongFile* getSelectedSong() { return songs[selected].get(); }
@@ -114,11 +123,15 @@ class SelectionScene : public Scene {
     return min(completed, SAVEFILE_getLibrarySize());
   }
 
-  inline u8 getSelectedNumericLevel() {
+  inline u32 getSelectedRawNumericLevel() {
     if (numericLevels.empty())
       return 0;
 
     return numericLevels[getSelectedNumericLevelIndex()];
+  }
+
+  inline u8 getSelectedNumericLevel() {
+    return getSelectedRawNumericLevel() & 0xff;
   }
 
   inline u8 getSelectedNumericLevelIndex() {
@@ -128,22 +141,34 @@ class SelectionScene : public Scene {
     return SAVEFILE_read8(SRAM->memory.numericLevel);
   }
 
-  inline void setClosestNumericLevel(u8 level) {
-    if (numericLevels.empty()) {
-      SAVEFILE_write8(SRAM->memory.numericLevel, 0);
-      return;
-    }
+  inline u32 getLastNumericLevel() {
+    return SAVEFILE_read32(SRAM->lastNumericLevel);
+  }
 
+  inline void setClosestNumericLevel(u32 level) {
     auto currentLevel = getSelectedNumericLevel();
     auto currentLevelIndex = getSelectedNumericLevelIndex();
+    int closest =
+        getClosestLevelIndexTo(level, currentLevel, currentLevelIndex);
+    if (closest > -1) {
+      SAVEFILE_write8(SRAM->memory.numericLevel, closest);
+    }
+  }
+
+  inline int getClosestLevelIndexTo(int level,
+                                    int currentLevel,
+                                    int currentLevelIndex) {
+    if (numericLevels.empty())
+      return 0;
+
     bool wantsCurrentLevel = level == currentLevel;
 
     u32 min = 0;
     u32 minDiff = abs((int)numericLevels[0] - (int)level);
-    for (u32 i = 0; i < numericLevels.size(); i++) {
-      if (wantsCurrentLevel && numericLevels[i] == currentLevel &&
+    for (int i = 0; i < (int)numericLevels.size(); i++) {
+      if (wantsCurrentLevel && (int)numericLevels[i] == currentLevel &&
           i == currentLevelIndex)
-        return;
+        return -1;
 
       u32 diff = (u32)abs((int)numericLevels[i] - (int)level);
       if (diff < minDiff) {
@@ -152,7 +177,11 @@ class SelectionScene : public Scene {
       }
     }
 
-    SAVEFILE_write8(SRAM->memory.numericLevel, min);
+    return min;
+  }
+
+  void updateLastNumericLevel() {
+    SAVEFILE_write32(SRAM->lastNumericLevel, getSelectedRawNumericLevel());
   }
 
   inline DifficultyLevel getLibraryType() {
@@ -202,6 +231,7 @@ class SelectionScene : public Scene {
   void scrollTo(u32 songIndex);
   void scrollTo(u32 page, u32 selected);
   void setNumericLevel(u8 numericLevelIndex);
+  void setRemoteNumericLevel(u8 remoteNumericLevelIndex);
   void goToSong();
 
   void processKeys(u16 keys);
@@ -230,8 +260,15 @@ class SelectionScene : public Scene {
   void loadChannels();
   void loadProgress();
   void setNames(std::string title, std::string artist);
-  void printNumericLevel(Chart* chart) { printNumericLevel(chart, 0); }
-  void printNumericLevel(Chart* chart, s8 offsetY);
+  void printNumericLevel(Chart* chart, Chart* remoteChart) {
+    printNumericLevel(chart, remoteChart, 0);
+  }
+  void printNumericLevel(Chart* chart, Chart* remoteChart, s8 offsetY);
+  std::string combineLevels(
+      std::string localLevel,
+      std::string remoteLevel,
+      std::string separator = NUMERIC_LEVEL_BADGE_SEPARATOR);
+  std::string formatNumericLevel(int numericLevel);
   void loadSelectedSongGrade();
   void processMultiplayerUpdates();
   void syncNumericLevelChanged(u8 newValue);

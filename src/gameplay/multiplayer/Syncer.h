@@ -5,6 +5,7 @@
 #include <libgba-sprite-engine/gba/tonc_memdef.h>
 #include <libgba-sprite-engine/gba/tonc_memmap.h>
 
+#include <string>
 #include "Protocol.h"
 #include "gameplay/debug/DebugTools.h"
 #include "gameplay/save/SaveFile.h"
@@ -18,10 +19,6 @@
 
 // Number of timer ticks (61.04μs) between messages (100 = 6,104ms)
 #define SYNC_SEND_INTERVAL 100
-
-// Max 0xFFFF messages before marking remote player as disconnected
-// (Not relevant for 2-player games)
-#define SYNC_REMOTE_TIMEOUT 16
 
 enum SyncState {
   SYNC_STATE_SEND_ROM_ID,
@@ -61,7 +58,9 @@ class Syncer {
  public:
   u8 $libraryType = 0;
   u8 $completedSongs = 0;
+  int $remoteNumericLevelIndex = -1;
   int $remoteNumericLevel = -1;
+  int $remoteLastNumericLevel = 0;
   bool $isPlayingSong = false;
   bool $hasStartedAudio = false;
   bool $resetFlag = false;
@@ -87,6 +86,7 @@ class Syncer {
   }
 
   inline SyncMode getMode() { return mode; }
+  inline bool isOnline() { return mode > SyncMode::SYNC_MODE_OFFLINE; }
 
   void initialize(SyncMode mode);
   void update();
@@ -95,6 +95,11 @@ class Syncer {
   void registerTimeout();
   void clearTimeout();
   void resetSongState();
+
+  void setRemoteNumericLevel(int newIndex, int newLevel) {
+    $remoteNumericLevelIndex = newIndex;
+    $remoteNumericLevel = newLevel;
+  }
 
  private:
   SyncState state = SyncState::SYNC_STATE_SEND_ROM_ID;
@@ -121,6 +126,13 @@ class Syncer {
   void resetData();
   void resetGameState();
   void resetError();
+
+ public:
+  // ---
+  // HACK: This doesn't belong here.
+  // Used by SelectionScene to delay music playback until render finishes
+  std::string pendingAudio = "";
+  u32 pendingSeek = 0;
 };
 
 extern Syncer* syncer;

@@ -1,8 +1,5 @@
-const Channels = require("../../parser/Channels");
-const utils = require("../../utils");
 const _ = require("lodash");
 
-const KNOWN_CHANNELS = ["ORIGINAL", "KPOP", "WORLD"];
 const NON_NUMERIC_LEVELS = ["CRAZY", "HARD", "NORMAL"];
 const VARIANTS = ["\0", ..."abcdefghijklmnopqrstuvwxyz"];
 
@@ -15,30 +12,11 @@ const TAGS = ["pro", "new", "ucs", "hidden", "train", "sp", "quest", "another"];
 
 module.exports = (metadata, charts, isBonus) => {
   // channel
-  if (metadata.channel === "UNKNOWN") {
-    if (GLOBAL_OPTIONS.mode === "auto") metadata.channel = "ORIGINAL";
-    else {
-      const channelOptions = KNOWN_CHANNELS.map(
-        (name, i) => `${i} = ${name}`
-      ).join(", ");
-
-      console.log("-> channels: ".bold + `(${channelOptions})`.cyan);
-      const channel = utils.insistentChoice(
-        "What channel?",
-        _.range(KNOWN_CHANNELS.length)
-      );
-      metadata.channel = _.keys(Channels)[parseInt(channel)];
-    }
-  }
+  if (metadata.channel === "UNKNOWN") metadata.channel = "ORIGINAL";
 
   // difficulty input method
   charts.forEach((it) => {
-    if (
-      GLOBAL_OPTIONS.mode === "manual" ||
-      it.header.isDouble ||
-      GLOBAL_OPTIONS.arcade ||
-      isBonus
-    )
+    if (it.header.isDouble || GLOBAL_OPTIONS.arcade || isBonus)
       it.header.mode = "NUMERIC";
   });
 
@@ -46,12 +24,8 @@ module.exports = (metadata, charts, isBonus) => {
   if (!GLOBAL_OPTIONS.arcade && !isBonus) {
     const singleCharts = charts.filter((it) => !it.header.isDouble);
     NON_NUMERIC_LEVELS.forEach((difficulty) => {
-      if (
-        !hasDifficulty(singleCharts, difficulty) &&
-        GLOBAL_OPTIONS.mode === "auto"
-      )
+      if (!hasDifficulty(singleCharts, difficulty))
         autoSetDifficulty(singleCharts, difficulty);
-      else setDifficulty(singleCharts, difficulty);
     });
     checkLevelOrder(singleCharts);
   }
@@ -184,31 +158,6 @@ const getChartAffinityLevel = (chart) => {
   }
 
   return affinity;
-};
-
-const setDifficulty = (charts, difficultyName) => {
-  const createId = (chart) => `${chart.header.name}/${chart.header.level}`;
-  const numericDifficultyCharts = charts.filter(
-    (it) => it.header.difficulty === "NUMERIC"
-  );
-  const levels = numericDifficultyCharts.map(createId);
-
-  if (!hasDifficulty(charts, difficultyName)) {
-    console.log("-> levels: ".bold + `(${levels.join(", ")})`.cyan);
-    const chartName = utils.insistentChoice(
-      `Which one is ${difficultyName}?`,
-      levels
-    );
-
-    _.find(
-      charts,
-      (it) => createId(it).toLowerCase() === chartName
-    ).header.difficulty = difficultyName;
-
-    return true;
-  }
-
-  return false;
 };
 
 const checkLevelOrder = (charts) => {

@@ -31,20 +31,20 @@ NumericProgress::NumericProgress(u32 x, u32 y) {
 }
 
 void NumericProgress::setValue(u32 completed, u32 total) {
-  completedDigits[0]->set(THREE_DIGITS_LUT[completed * LUT_DIGITS + 1], false);
-  completedDigits[1]->set(THREE_DIGITS_LUT[completed * LUT_DIGITS + 2], false);
+  completedDigits[0]->set((completed % 100) / 10, false);
+  completedDigits[1]->set(completed % 10, false);
 
-  totalDigits[0]->set(THREE_DIGITS_LUT[total * LUT_DIGITS + 1], false);
-  totalDigits[1]->set(THREE_DIGITS_LUT[total * LUT_DIGITS + 2], false);
+  totalDigits[0]->set((total % 100) / 10, false);
+  totalDigits[1]->set(total % 10, false);
 }
 
 void NumericProgress::show() {
   for (u32 i = 0; i < DIGITS; i++) {
-    completedDigits[i]->relocate(DigitSize::BIG, x, y, i);
+    completedDigits[i]->relocate(x, y);
     completedDigits[i]->show();
   }
   for (u32 i = 0; i < DIGITS; i++) {
-    totalDigits[i]->relocate(DigitSize::BIG, x + DIGITS_TOTAL_POSITION_X, y, i);
+    totalDigits[i]->relocate(x + DIGITS_TOTAL_POSITION_X, y);
     totalDigits[i]->show();
   }
   of->get()->moveTo(x + OF_POSITION_X, y);

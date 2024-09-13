@@ -13,6 +13,7 @@
 #include "Progress.h"
 #include "Settings.h"
 #include "State.h"
+#include "Stats.h"
 #include "assets.h"
 #include "gameplay/debug/DebugTools.h"
 #include "gameplay/models/Chart.h"
@@ -35,8 +36,9 @@ typedef struct __attribute__((__packed__)) {
   u32 romId;
 
   Settings settings;
-  char padding[5];
-  u32 globalOffset;
+  char padding[1];
+  u32 lastNumericLevel;  // (*) (memory) (high 16bit: type; low 16bit: level)
+  u32 globalOffset;      // (*) (adminSettings)
   Memory memory;
   Progress progress[PROGRESS_REGISTERS];
 
@@ -47,16 +49,22 @@ typedef struct __attribute__((__packed__)) {
 
   AdminSettings adminSettings;
 
-  bool isBonusMode;
-  u32 randomSeed;
+  bool isBonusMode;  // (*) state
+  u32 randomSeed;    // (*) state
   u8 beat;
 
   Mods mods;
-  char padding3[4];
-
+  char padding3[3];
+  bool isShuffleMode;  // (*) state
   DeathMixProgress deathMixProgress;
 
-  s8 customOffsets[CUSTOM_OFFSET_TABLE_SIZE];
+  s8 customOffsets[CUSTOM_OFFSET_TABLE_TOTAL_SIZE];
+
+  char padding4[10];
+  Stats stats;
+
+  // (*) these properties shouldn't be at the root level, but we'll leave them
+  // there because it's important to maintain save file compatibility
 } SaveFile;
 
 #define SRAM ((SaveFile*)sram_mem)
@@ -68,11 +76,13 @@ typedef struct __attribute__((__packed__)) {
          (*(((volatile char*)&TARGET) + 1) << 8) +  \
          (*(((volatile char*)&TARGET) + 2) << 16) + \
          (*(((volatile char*)&TARGET) + 3) << 24)))
-#define SAVEFILE_write32(DEST, VALUE)                                   \
-  *(((volatile char*)&DEST) + 0) = (((u32)(VALUE)) & 0x000000ff) >> 0;  \
-  *(((volatile char*)&DEST) + 1) = (((u32)(VALUE)) & 0x0000ff00) >> 8;  \
-  *(((volatile char*)&DEST) + 2) = (((u32)(VALUE)) & 0x00ff0000) >> 16; \
-  *(((volatile char*)&DEST) + 3) = (((u32)(VALUE)) & 0xff000000) >> 24;
+#define SAVEFILE_write32(DEST, VALUE)                                     \
+  do {                                                                    \
+    *(((volatile char*)&DEST) + 0) = (((u32)(VALUE)) & 0x000000ff) >> 0;  \
+    *(((volatile char*)&DEST) + 1) = (((u32)(VALUE)) & 0x0000ff00) >> 8;  \
+    *(((volatile char*)&DEST) + 2) = (((u32)(VALUE)) & 0x00ff0000) >> 16; \
+    *(((volatile char*)&DEST) + 3) = (((u32)(VALUE)) & 0xff000000) >> 24; \
+  } while (false);
 
 inline void SAVEFILE_resetSettings() {
   SAVEFILE_write32(SRAM->settings.audioLag, 0);
@@ -98,9 +108,9 @@ inline void SAVEFILE_resetMods() {
 }
 
 inline void SAVEFILE_resetRumble() {
-  u8 rumbleOpts = RUMBLE_OPTS_BUILD(2, 5);
+  u8 rumbleOpts = RUMBLE_OPTS_BUILD(2, 0);
 
-  SAVEFILE_write8(SRAM->adminSettings.rumbleFrames, 4);
+  SAVEFILE_write8(SRAM->adminSettings.rumbleFrames, 10);
   SAVEFILE_write8(SRAM->adminSettings.rumbleOpts, rumbleOpts);
 }
 
@@ -112,17 +122,26 @@ inline void SAVEFILE_resetAdminSettings() {
   SAVEFILE_write8(SRAM->adminSettings.navigationStyle,
                   NavigationStyleOpts::GBA);
   SAVEFILE_write8(SRAM->adminSettings.offsetEditingEnabled, false);
-  SAVEFILE_write8(SRAM->adminSettings.backgroundVideos,
-                  BackgroundVideosOpts::dOFF);
+  SAVEFILE_write8(SRAM->adminSettings.hqMode, HQModeOpts::dOFF);
   SAVEFILE_write8(SRAM->adminSettings.ewramOverclock, false);
   SAVEFILE_write8(SRAM->adminSettings.ps2Input, false);
   SAVEFILE_write32(SRAM->globalOffset, 0);
   SAVEFILE_resetRumble();
 
 #ifdef SENV_DEVELOPMENT
+  SAVEFILE_write8(SRAM->adminSettings.rumble, RumbleOpts::rNO_RUMBLE);
   SAVEFILE_write8(SRAM->adminSettings.navigationStyle,
                   NavigationStyleOpts::PIU);
 #endif
+}
+
+inline void SAVEFILE_resetStats() {
+  SAVEFILE_write32(SRAM->stats.playTimeSeconds, 0);
+  SAVEFILE_write32(SRAM->stats.stagePasses, 0);
+  SAVEFILE_write32(SRAM->stats.stageBreaks, 0);
+  SAVEFILE_write32(SRAM->stats.sGrades, 0);
+  SAVEFILE_write32(SRAM->stats.maxCombo, 0);
+  SAVEFILE_write32(SRAM->stats.highestLevel, 0);
 }
 
 inline u32 SAVEFILE_normalize(u32 librarySize) {
@@ -202,18 +221,17 @@ inline u32 SAVEFILE_normalize(u32 librarySize) {
   u8 navigationStyle = SAVEFILE_read8(SRAM->adminSettings.navigationStyle);
   u8 offsetEditingEnabled =
       SAVEFILE_read8(SRAM->adminSettings.offsetEditingEnabled);
-  u8 backgroundVideos = SAVEFILE_read8(SRAM->adminSettings.backgroundVideos);
+  u8 hqMode = SAVEFILE_read8(SRAM->adminSettings.hqMode);
   u8 ewramOverclock = SAVEFILE_read8(SRAM->adminSettings.ewramOverclock);
   u8 ps2Input = SAVEFILE_read8(SRAM->adminSettings.ps2Input);
   u8 rumbleFrames = SAVEFILE_read8(SRAM->adminSettings.rumbleFrames);
   u8 rumbleOpts = SAVEFILE_read8(SRAM->adminSettings.rumbleOpts);
   int globalOffset = (int)SAVEFILE_read32(SRAM->globalOffset);
   if (arcadeCharts >= 2 || rumble >= 3 || ioBlink >= 3 || sramBlink >= 3 ||
-      navigationStyle >= 2 || offsetEditingEnabled >= 2 ||
-      backgroundVideos >= 5 || ewramOverclock >= 2 || ps2Input >= 2 ||
-      rumbleFrames == 0 || rumbleFrames >= 9 ||
-      RUMBLE_PREROLL(rumbleOpts) == 0 || RUMBLE_PREROLL(rumbleOpts) >= 9 ||
-      RUMBLE_IDLE(rumbleOpts) <= 1 || RUMBLE_IDLE(rumbleOpts) >= 7 ||
+      navigationStyle >= 2 || offsetEditingEnabled >= 2 || hqMode >= 5 ||
+      ewramOverclock >= 2 || ps2Input >= 2 || rumbleFrames == 0 ||
+      rumbleFrames >= 13 || RUMBLE_PREROLL(rumbleOpts) == 0 ||
+      RUMBLE_PREROLL(rumbleOpts) >= 13 || RUMBLE_IDLE(rumbleOpts) >= 7 ||
       globalOffset < -3000 || globalOffset > 3000 || (globalOffset & 7) != 0) {
     SAVEFILE_resetAdminSettings();
     fixes |= 0b100000;
@@ -264,9 +282,26 @@ inline u32 SAVEFILE_normalize(u32 librarySize) {
     fixes |= 0b1000000000;
   }
 
+  // validate stats
+  u32 maxCombo = SAVEFILE_read32(SRAM->stats.maxCombo);
+  u32 highestLevel = SAVEFILE_read32(SRAM->stats.highestLevel);
+  if (maxCombo > 9999 || (highestLevel & 0xff) >= 99 ||
+      ((highestLevel >> 16) & 0xff) > 2) {
+    SAVEFILE_resetStats();
+    fixes |= 0b10000000000;
+  }
+
+  // quick fixes
+  u32 lastNumericLevel = SAVEFILE_read32(SRAM->lastNumericLevel);
   u8 isBonusMode = SAVEFILE_read8(SRAM->isBonusMode);
+  u8 isShuffleMode = SAVEFILE_read8(SRAM->isShuffleMode);
   if (isBonusMode >= 2)
     SAVEFILE_write8(SRAM->isBonusMode, false);
+  if (isShuffleMode >= 2)
+    SAVEFILE_write8(SRAM->isShuffleMode, false);
+  if ((lastNumericLevel & 0xff) > 99 || ((lastNumericLevel >> 16) & 0xff) > 2) {
+    SAVEFILE_write32(SRAM->lastNumericLevel, 0);
+  }
 
   if (fixes > 0) {
     // if something was fixed, reset custom offset, just in case
@@ -316,6 +351,11 @@ inline u32 SAVEFILE_initialize(const GBFS_FILE* fs) {
     ARCADE_initialize();
     OFFSET_initialize();
     SAVEFILE_resetAdminSettings();
+    SAVEFILE_resetStats();
+
+    SAVEFILE_write32(SRAM->lastNumericLevel, 0);
+    SAVEFILE_write8(SRAM->isBonusMode, false);
+    SAVEFILE_write32(SRAM->randomSeed, 0);
 
     SAVEFILE_write8(
         SRAM->deathMixProgress.completedSongs[DifficultyLevel::NORMAL], 0);
@@ -388,7 +428,7 @@ inline bool SAVEFILE_isModeUnlocked(GameMode gameMode) {
       gameMode == GameMode::MULTI_COOP)
     return maxCompletedSongs >= 1;
 
-  if (gameMode == GameMode::IMPOSSIBLE)
+  if (gameMode == GameMode::IMPOSSIBLE || gameMode == GameMode::DEATH_MIX)
     return maxCompletedSongs >= SAVEFILE_getLibrarySize();
 
   return true;
@@ -414,13 +454,16 @@ inline bool SAVEFILE_didComplete(GameMode gameMode,
   return completedSongs >= librarySize;
 }
 
-inline DifficultyLevel SAVEFILE_getMaxLibraryType() {
+inline DifficultyLevel SAVEFILE_getMaxLibraryType(bool campaignOnly = false) {
   DifficultyLevel maxLevel = DifficultyLevel::NORMAL;
   u32 max = 0;
 
   for (u32 i = 0; i < MAX_DIFFICULTY + 1; i++) {
     auto difficultyLevel = static_cast<DifficultyLevel>(i);
-    auto completedSongs = SAVEFILE_getCompletedSongsOf(difficultyLevel);
+    auto completedSongs =
+        campaignOnly
+            ? SAVEFILE_getCompletedSongsOf(GameMode::CAMPAIGN, difficultyLevel)
+            : SAVEFILE_getCompletedSongsOf(difficultyLevel);
 
     if (completedSongs >= max) {
       maxLevel = difficultyLevel;
@@ -431,9 +474,9 @@ inline DifficultyLevel SAVEFILE_getMaxLibraryType() {
   return maxLevel;
 }
 
-inline GradeType SAVEFILE_getStoryGradeOf(u8 songIndex, DifficultyLevel level) {
-  auto gameMode = SAVEFILE_getGameMode();
-
+inline GradeType SAVEFILE_getStoryGradeOf(GameMode gameMode,
+                                          u8 songIndex,
+                                          DifficultyLevel level) {
   u32 index = (gameMode == GameMode::IMPOSSIBLE) * PROGRESS_IMPOSSIBLE + level;
   int lastIndex = SAVEFILE_read8(SRAM->progress[index].completedSongs) - 1;
   if (songIndex > lastIndex)
@@ -441,6 +484,11 @@ inline GradeType SAVEFILE_getStoryGradeOf(u8 songIndex, DifficultyLevel level) {
 
   return static_cast<GradeType>(
       SAVEFILE_read8(SRAM->progress[index].grades[songIndex]));
+}
+
+inline GradeType SAVEFILE_getStoryGradeOf(u8 songIndex, DifficultyLevel level) {
+  auto gameMode = SAVEFILE_getGameMode();
+  return SAVEFILE_getStoryGradeOf(gameMode, songIndex, level);
 }
 
 inline GradeType SAVEFILE_getArcadeGradeOf(u8 songId, u8 numericLevelIndex) {
@@ -502,6 +550,10 @@ inline bool SAVEFILE_setGradeOf(u8 songIndex,
             SAVEFILE_read8(SRAM->progress[index].grades[songIndex]);
         if (firstTime || grade < currentGrade)
           SAVEFILE_write8(SRAM->progress[index].grades[songIndex], grade);
+
+        u8 currentArcadeGrade = ARCADE_readSingle(songId, numericLevelIndex);
+        if (grade < currentArcadeGrade)
+          ARCADE_writeSingle(songId, numericLevelIndex, grade);
 
         return songIndex == SAVEFILE_getLibrarySize() - 1;
     }

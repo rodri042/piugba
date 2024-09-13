@@ -24,9 +24,9 @@ COLOR SCENE_transformColor(COLOR color, ColorFilter filter) {
     }
     color = r | (g << 5) | (b << 10);
   } else if (filter == CONTRAST) {
-    u8 newR = (r > 15) ? std::min(31, r + 8) : std::max(0, r - 8);
-    u8 newG = (g > 15) ? std::min(31, g + 8) : std::max(0, g - 8);
-    u8 newB = (b > 15) ? std::min(31, b + 8) : std::max(0, b - 8);
+    u8 newR = (r > 15) ? min(31, r + 8) : max(0, r - 8);
+    u8 newG = (g > 15) ? min(31, g + 8) : max(0, g - 8);
+    u8 newB = (b > 15) ? min(31, b + 8) : max(0, b - 8);
     color = newR | (newG << 5) | (newB << 10);
   } else if (filter == POSTERIZE) {
     u8 newR = (r / 8) * 8;
@@ -34,28 +34,28 @@ COLOR SCENE_transformColor(COLOR color, ColorFilter filter) {
     u8 newB = (b / 8) * 8;
     color = newR | (newG << 5) | (newB << 10);
   } else if (filter == WARM) {
-    u8 newR = std::min(31, r + 5);
+    u8 newR = min(31, r + 5);
     color = newR | (g << 5) | (b << 10);
   } else if (filter == COLD) {
-    u8 newB = std::min(31, b + 5);
+    u8 newB = min(31, b + 5);
     color = r | (g << 5) | (newB << 10);
   } else if (filter == ETHEREAL) {
-    u8 newR = std::min(31, r + 3);
-    u8 newG = std::max(0, g - 2);
-    u8 newB = std::min(31, b + 5);
+    u8 newR = min(31, r + 3);
+    u8 newG = max(0, g - 2);
+    u8 newB = min(31, b + 5);
     u8 purpleTint = 4;
-    newR = std::min(31, newR + purpleTint);
-    newB = std::min(31, newB + purpleTint);
+    newR = min(31, newR + purpleTint);
+    newB = min(31, newB + purpleTint);
 
     color = newR | (newG << 5) | (newB << 10);
   } else if (filter == WATER) {
     u8 newR = r / 2;
-    u8 newG = std::min(31, g + 8);
-    u8 newB = std::min(31, b + 8);
+    u8 newG = min(31, g + 8);
+    u8 newB = min(31, b + 8);
     color = newR | (newG << 5) | (newB << 10);
   } else if (filter == GOLDEN) {
-    u8 newR = std::min(31, r + 6);
-    u8 newG = std::min(31, g + 4);
+    u8 newR = min(31, r + 6);
+    u8 newG = min(31, g + 4);
     u8 newB = b / 2;
     color = newR | (newG << 5) | (newB << 10);
   } else if (filter == DREAMY) {
@@ -90,20 +90,21 @@ COLOR SCENE_transformColor(COLOR color, ColorFilter filter) {
     color = luminance > threshold ? 31 | (31 << 5) | (31 << 10) : 0;
   } else if (filter == INVERT) {
     color = 0xffff - color;
+  } else if (filter == DOUBLE_FILTER) {
+    color = b | (g << 5) | (r << 10);
   }
 
   return color;
 }
 
-void SCENE_applyColorFilterIndex(PaletteManager* palette,
+void SCENE_applyColorFilterIndex(PALBANK* palette,
                                  int bank,
                                  int index,
                                  ColorFilter filter) {
-  palette->change(bank, index,
-                  SCENE_transformColor(palette->get(bank, index), filter));
+  palette[bank][index] = SCENE_transformColor(palette[bank][index], filter);
 }
 
-void SCENE_applyColorFilter(PaletteManager* palette, ColorFilter colorFilter) {
+void SCENE_applyColorFilter(PALBANK* palette, ColorFilter colorFilter) {
   for (int bank = 0; bank < PALETTE_BANK_SIZE; bank++) {
     for (int index = 0; index < PALETTE_BANK_SIZE; index++) {
       SCENE_applyColorFilterIndex(palette, bank, index, colorFilter);

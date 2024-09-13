@@ -1,6 +1,8 @@
 #ifndef DEBUG_TOOLS_H
 #define DEBUG_TOOLS_H
 
+#include <stdarg.h>
+#include <stdio.h>
 #include "utils/SceneUtils.h"
 
 extern "C" {
@@ -64,33 +66,29 @@ inline void BSOD(std::string message) {
   player_stop();
   SCENE_init();
   BACKGROUND_enable(true, false, false, false);
-  TextStream::instance().setText(message, 0, -3);
+  TextStream::instance().setText(std::string("piuGBA - ") +
+                                     (ENV_ARCADE ? "arcade - " : "full - ") +
+                                     (ENV_DEVELOPMENT ? "dev" : "prod"),
+                                 0, -3);
+  TextStream::instance().setText(message, 2, -3);
   while (true)
     ;
 }
 
-inline void profileStart() {
-  REG_TM1CNT_L = 0;
-  REG_TM2CNT_L = 0;
+inline vu16& _REG_LOG_ENABLE = *reinterpret_cast<vu16*>(0x4FFF780);
+inline vu16& _REG_LOG_LEVEL = *reinterpret_cast<vu16*>(0x4FFF700);
 
-  REG_TM1CNT_H = 0;
-  REG_TM2CNT_H = 0;
+static inline void log(const char* fmt, ...) {
+  _REG_LOG_ENABLE = 0xC0DE;
 
-  REG_TM2CNT_H = TM_ENABLE | TM_CASCADE;
-  REG_TM1CNT_H = TM_ENABLE | TM_FREQ_1;
-}
+  va_list args;
+  va_start(args, fmt);
 
-inline u32 profileStop() {
-  REG_TM1CNT_H = 0;
-  REG_TM2CNT_H = 0;
+  char* const log = (char*)0x4FFF600;
+  vsnprintf(log, 0x100, fmt, args);
+  _REG_LOG_LEVEL = 0x102;  // Level: WARN
 
-  return (REG_TM1CNT_L | (REG_TM2CNT_L << 16));
-}
-
-inline u32 toMs(u32 cycles) {
-  // CPU Frequency * time per frame = cycles per frame
-  // 16780000 * (1/60) ~= 279666
-  return (cycles * 1000) / (279666 * 60);
+  va_end(args);
 }
 
 #endif  // DEBUG_TOOLS_H

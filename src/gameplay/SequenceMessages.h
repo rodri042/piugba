@@ -46,15 +46,21 @@
 
 #define MODE_IMPOSSIBLE         \
   "In IMPOSSIBLE MODE:\r\n"     \
-  "- Songs run FASTER\r\n"      \
+  "- Songs play FASTER\r\n"     \
   "- Patterns are MIRRORED\r\n" \
-  "- Screen has visual MODS"
+  "- There are visual MODS"
 
 #define MODE_DEATH_MIX            \
   "In DEATHMIX MODE, you'll\r\n"  \
   "play a mixed nonstop set.\r\n" \
   "Life can't be recovered,\r\n"  \
   "so try not to MISS!"
+
+#define MODE_SHUFFLE              \
+  "In SHUFFLE MODE, you'll\r\n"   \
+  "play a mixed nonstop set.\r\n" \
+  "Pick a difficulty level\r\n"   \
+  "and have fun!"
 
 #define KEYS_HINT                 \
   "To change the speed, use:\r\n" \
@@ -68,10 +74,10 @@
   "- Rate: B + START/SELECT\r\n"  \
   "- Seek: A + START/SELECT"
 
-#define COOP_HINT             \
-  "       CO-OP LEVEL\r\n"    \
-  "1) Get a friend.\r\n"      \
-  "2) Grab a Link Cable.\r\n" \
+#define COOP_HINT               \
+  "       CO-OP LEVEL\r\n"      \
+  "1) Get a friend.\r\n"        \
+  "2) Grab a Link Adapter.\r\n" \
   "3) Use Multi COOP."
 
 #define DOUBLE_PS2_INPUT_HINT  \
@@ -93,7 +99,7 @@
   "  legend. Amazing work!"
 
 #define WIN_DEATHMIX            \
-  " WOAH, congratulations!\r\n" \
+  " WHOA, congratulations!\r\n" \
   "  Ok, here's a secret:\r\n"  \
   "Try holding START when\r\n"  \
   "opening the ARCADE MODE!"

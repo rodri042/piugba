@@ -24,29 +24,26 @@ const u32 FRACUMUL_MS_TO_FRAME_AT_30FPS = 128849018;  // (*30/1000)
 DATA_EWRAM static FATFS fatfs;
 DATA_EWRAM static FIL file;
 
-BackgroundVideosOpts getMode() {
-  return static_cast<BackgroundVideosOpts>(
-      SAVEFILE_read8(SRAM->adminSettings.backgroundVideos));
+HQModeOpts getMode() {
+  return static_cast<HQModeOpts>(SAVEFILE_read8(SRAM->adminSettings.hqMode));
 }
 
 bool VideoStore::isEnabled() {
-  return SAVEFILE_read8(SRAM->adminSettings.backgroundVideos);
+  return SAVEFILE_read8(SRAM->adminSettings.hqMode);
 }
 
 bool VideoStore::isActivating() {
-  return getMode() == BackgroundVideosOpts::dACTIVATING;
+  return getMode() == HQModeOpts::dACTIVATING;
 }
 
 void VideoStore::disable() {
-  SAVEFILE_write8(SRAM->adminSettings.backgroundVideos,
-                  BackgroundVideosOpts::dOFF);
+  SAVEFILE_write8(SRAM->adminSettings.hqMode, HQModeOpts::dOFF);
 }
 
 VideoStore::State VideoStore::activate() {
   setState(OFF);
   auto previousMode = getMode();
-  SAVEFILE_write8(SRAM->adminSettings.backgroundVideos,
-                  BackgroundVideosOpts::dACTIVATING);
+  SAVEFILE_write8(SRAM->adminSettings.hqMode, HQModeOpts::dACTIVATING);
 
   auto result = flashcartio_activate();
   if (result != FLASHCART_ACTIVATED) {
@@ -61,10 +58,9 @@ VideoStore::State VideoStore::activate() {
     return setState(MOUNT_ERROR);
   }
 
-  SAVEFILE_write8(SRAM->adminSettings.backgroundVideos,
-                  previousMode > BackgroundVideosOpts::dACTIVE
-                      ? previousMode
-                      : BackgroundVideosOpts::dACTIVE);
+  SAVEFILE_write8(SRAM->adminSettings.hqMode, previousMode > HQModeOpts::dACTIVE
+                                                  ? previousMode
+                                                  : HQModeOpts::dACTIVE);
   setState(ACTIVE, &fatfs);
 
   return state;
@@ -74,7 +70,7 @@ VideoStore::LoadResult VideoStore::load(std::string videoPath,
                                         int videoOffset) {
   if (state != ACTIVE)
     return LoadResult::NO_FILE;
-  if (getMode() == BackgroundVideosOpts::dAUDIO_ONLY)
+  if (getMode() == HQModeOpts::dAUDIO_ONLY)
     return LoadResult::NO_FILE;
 
   memory = getSecondaryMemory(REQUIRED_MEMORY);
@@ -164,7 +160,7 @@ CODE_IWRAM bool VideoStore::endRead(u8* buffer, u32 sectors) {
 
 VideoStore::State VideoStore::setState(State newState, void* fatfs) {
   state = newState;
-  PlaybackState.isPCMDisabled = getMode() == BackgroundVideosOpts::dVIDEO_ONLY;
+  PlaybackState.isPCMDisabled = getMode() == HQModeOpts::dVIDEO_ONLY;
   PlaybackState.fatfs = fatfs;
   return newState;
 }

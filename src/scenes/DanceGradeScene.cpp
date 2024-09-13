@@ -6,6 +6,7 @@
 #include "gameplay/Key.h"
 #include "gameplay/Sequence.h"
 #include "gameplay/multiplayer/Syncer.h"
+#include "objects/score/combo/Combo.h"
 #include "player/PlaybackState.h"
 #include "utils/SceneUtils.h"
 #include "utils/StringUtils.h"
@@ -25,15 +26,15 @@ extern "C" {
 const u32 ID_MAIN_BACKGROUND = 1;
 const u32 BANK_BACKGROUND_TILES = 0;
 const u32 BANK_BACKGROUND_MAP = 16;
-const u32 TEXT_COLOR = 0x7FFF;
+const u32 TEXT_COLOR = 0b111111111111101;
 const u32 TEXT_ROW = 17;
 const u32 SCORE_DIGITS = 8;
 
 const u32 TOTALS_X[] = {11, 160};
-const u32 TOTALS_Y[] = {37, 53, 69, 85, 101};
-const u32 TOTAL_MAX_COMBO_Y = 117;
+const u32 TOTALS_Y[] = {37 - 2, 53 - 2, 69 - 2, 85 - 2, 101 - 2};
+const u32 TOTAL_MAX_COMBO_Y = 117 - 2;
 const u32 GRADE_X = 88;
-const u32 GRADE_Y = 52;
+const u32 GRADE_Y = 52 - 2;
 const u32 MINI_GRADE_X[] = {37, 187};
 const u32 MINI_GRADE_Y = 137;
 
@@ -41,12 +42,18 @@ DanceGradeScene::DanceGradeScene(std::shared_ptr<GBAEngine> engine,
                                  const GBFS_FILE* fs,
                                  std::unique_ptr<Evaluation> evaluation,
                                  std::unique_ptr<Evaluation> remoteEvaluation,
+                                 std::string songTitle,
+                                 std::string songArtist,
+                                 std::string songLevel,
                                  bool differentCharts,
                                  bool isLastSong)
     : Scene(engine) {
   this->fs = fs;
   this->evaluation = std::move(evaluation);
   this->remoteEvaluation = std::move(remoteEvaluation);
+  this->songTitle = songTitle;
+  this->songArtist = songArtist;
+  this->songLevel = songLevel;
   this->differentCharts = differentCharts;
   this->isLastSong = isLastSong;
 }
@@ -90,11 +97,21 @@ void DanceGradeScene::load() {
   setUpBackground();
   printScore();
 
+  SCENE_write(songTitle, 1);
+  TextStream::instance().setText(
+      "- " + songArtist + " -", 2,
+      TEXT_MIDDLE_COL - (songArtist.length() + 4) / 2);
+  SCENE_write(songLevel, 3);
+
+  bool has4Digits = evaluation->needs4Digits() ||
+                    (isVs() && remoteEvaluation->needs4Digits());
+
   u32 totalsX = TOTALS_X[!isVs() || syncer->getLocalPlayerId() == 1];
   for (u32 i = 0; i < totals.size(); i++)
-    totals[i] = std::unique_ptr<Total>{new Total(totalsX, TOTALS_Y[i], i == 0)};
-  maxComboTotal =
-      std::unique_ptr<Total>{new Total(totalsX, TOTAL_MAX_COMBO_Y, false)};
+    totals[i] = std::unique_ptr<Total>{
+        new Total(totalsX, TOTALS_Y[i], has4Digits, i == 0)};
+  maxComboTotal = std::unique_ptr<Total>{
+      new Total(totalsX, TOTAL_MAX_COMBO_Y, has4Digits, false)};
 
   totals[FeedbackType::PERFECT]->setValue(evaluation->perfects);
   totals[FeedbackType::GREAT]->setValue(evaluation->greats);
@@ -120,9 +137,9 @@ void DanceGradeScene::load() {
 
     for (u32 i = 0; i < remoteTotals.size(); i++)
       remoteTotals[i] = std::unique_ptr<Total>{
-          new Total(TOTALS_X[remoteId], TOTALS_Y[i], false)};
+          new Total(TOTALS_X[remoteId], TOTALS_Y[i], has4Digits, false)};
     remoteMaxComboTotal = std::unique_ptr<Total>{
-        new Total(TOTALS_X[remoteId], TOTAL_MAX_COMBO_Y, false)};
+        new Total(TOTALS_X[remoteId], TOTAL_MAX_COMBO_Y, has4Digits, false)};
 
     remoteTotals[FeedbackType::PERFECT]->setValue(remoteEvaluation->perfects);
     remoteTotals[FeedbackType::GREAT]->setValue(remoteEvaluation->greats);
@@ -136,6 +153,8 @@ void DanceGradeScene::load() {
     grade->get()->setDoubleSize(true);
     grade->get()->setAffineId(AFFINE_BASE);
   }
+
+  updateStats();
 }
 
 void DanceGradeScene::tick(u16 keys) {
@@ -238,6 +257,7 @@ void DanceGradeScene::finish() {
 
 void DanceGradeScene::printScore() {
   TextStream::instance().setFontColor(TEXT_COLOR);
+  TextStream::instance().setFontSubcolor(text_bg_palette_default_subcolor);
 
   if (isVs()) {
     TextStream::instance().scrollNow(0, -1);
@@ -292,6 +312,25 @@ std::string DanceGradeScene::pointsToString(u32 points) {
 
 u32 DanceGradeScene::getMultiplayerPointsOf(Evaluation* evaluation) {
   return differentCharts ? evaluation->percent : evaluation->points;
+}
+
+void DanceGradeScene::updateStats() {
+  u32 passes = SAVEFILE_read32(SRAM->stats.stagePasses);
+  SAVEFILE_write32(SRAM->stats.stagePasses, passes + 1);
+
+  GradeType gradeType = isVs() ? miniGrades[0]->getType() : grade->getType();
+  if (gradeType == GradeType::S) {
+    u32 sGrades = SAVEFILE_read32(SRAM->stats.sGrades);
+    SAVEFILE_write32(SRAM->stats.sGrades, sGrades + 1);
+  }
+
+  u32 newCombo = evaluation->maxCombo;
+  if (newCombo > MAX_COMBO)
+    newCombo = MAX_COMBO;
+  u32 maxCombo = SAVEFILE_read32(SRAM->stats.maxCombo);
+  if (newCombo > maxCombo) {
+    SAVEFILE_write32(SRAM->stats.maxCombo, newCombo);
+  }
 }
 
 void DanceGradeScene::playSound() {

@@ -20,6 +20,11 @@ class Evaluation {
   u32 longNotes = 0;
   u32 percent = 0;
 
+  inline bool needs4Digits() {
+    return perfects > 999 || greats > 999 || goods > 999 || bads > 999 ||
+           misses > 999 || maxCombo > 999;
+  }
+
   inline GradeType getGrade() {
     if (percent >= 95 && misses == 0)
       return GradeType::S;

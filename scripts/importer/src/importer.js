@@ -45,8 +45,6 @@ const FILE_VIDEO = (name) =>
   new RegExp(`^${REGEXP_ESCAPE(name)}\\.(${FILE_VIDEO_EXTENSIONS})$`, "i");
 const FILE_VIDEO_REGEXP_CODE = (name) =>
   `${REGEXP_ESCAPE(name)}\\.(${FILE_VIDEO_EXTENSIONS})`;
-const MODE_OPTIONS = ["auto", "manual"];
-const MODE_DEFAULT = "auto";
 const SELECTOR_PREFIXES = {
   NORMAL: "_snm_",
   HARD: "_shd_",
@@ -111,7 +109,6 @@ const opt = getopt
       "hqaudioenable=HQAUDIOENABLE",
       "enable hq audio (one of: *false*|true)",
     ],
-    ["m", "mode=MODE", "how to complete missing data (one of: *auto*|manual)"],
     ["b", "boss=BOSS", "automatically add boss levels (one of: false|*true*)"],
     ["a", "arcade=ARCADE", "arcade mode only (one of: *false*|true)"],
     [
@@ -125,8 +122,6 @@ const opt = getopt
   .parseSystem();
 
 global.GLOBAL_OPTIONS = opt.options;
-if (!_.includes(MODE_OPTIONS, GLOBAL_OPTIONS.mode))
-  GLOBAL_OPTIONS.mode = MODE_DEFAULT;
 GLOBAL_OPTIONS.directory = $path.resolve(
   GLOBAL_OPTIONS.directory || DEFAULT_SONGS_PATH
 );
@@ -157,6 +152,7 @@ const UNIQUE_MAP_PATH = $path.resolve(
 const BLACK_DOT_FILE = $path.resolve(IMAGES_PATH, "black.bmp");
 const BONUS_DIRECTORY = $path.join(GLOBAL_OPTIONS.directory, BONUS_FOLDER_NAME);
 
+mkdirp.sync(GLOBAL_OPTIONS.output);
 if (!fs.existsSync(GLOBAL_OPTIONS.directory))
   throw new Error("Songs directory not found: " + GLOBAL_OPTIONS.directory);
 if (!fs.existsSync(GLOBAL_OPTIONS.output))
@@ -232,7 +228,7 @@ async function run() {
         `${$path.join(GLOBAL_OPTIONS.directory, ROM_ID_FILE_REUSE)}`.cyan
     );
   } catch (e) {}
-  await utils.run(`rm -rf ${GLOBAL_OPTIONS.output}`);
+  await utils.run(`rm -rf "${GLOBAL_OPTIONS.output}"`);
   mkdirp.sync(GLOBAL_OPTIONS.output);
   if (GLOBAL_OPTIONS.videoenable) mkdirp.sync(GLOBAL_OPTIONS.videolib);
   if (GLOBAL_OPTIONS.hqaudioenable) mkdirp.sync(GLOBAL_OPTIONS.hqaudiolib);
@@ -273,13 +269,13 @@ async function run() {
     const path = $path.join(IMAGES_PATH, imageFile);
 
     await utils.report(
-      () => importers.background(name, path, GLOBAL_OPTIONS.output),
+      () => importers.background(name, path, GLOBAL_OPTIONS.output, null, 253), // (UI backgrounds need 3 extra colors: 1 for darkener + 2 for text)
       imageFile
     );
   }
   await utils.report(
     async () =>
-      await utils.run(`cp ${UNIQUE_MAP_PATH} ${GLOBAL_OPTIONS.output}`),
+      await utils.run(`cp "${UNIQUE_MAP_PATH}" "${GLOBAL_OPTIONS.output}"`),
     "_unique_map.map.bin"
   );
 
@@ -359,7 +355,7 @@ async function run() {
       if (!GLOBAL_OPTIONS.fast) {
         console.log(
           `(${(i + 1).toString().red}${"/".red}${
-            songs.length.toString().red
+            songsToImport.length.toString().red
           }) ${"Importing".bold} ${song.name.cyan}...`
         );
       }

@@ -37,7 +37,7 @@ void ChartReader::logDebugInfo<CHART_DEBUG>() {
   u32 currentIndex = eventIndex;
   while (currentIndex < chart->eventCount) {
     Event* event = chart->events + currentIndex;
-    EventType type = static_cast<EventType>((event->data & EVENT_TYPE));
+    EventType type = static_cast<EventType>((event->data() & EVENT_TYPE));
     if (EVENT_HAS_PARAM(type))
       break;
     currentIndex++;
@@ -45,7 +45,7 @@ void ChartReader::logDebugInfo<CHART_DEBUG>() {
 
   if (currentIndex < chart->eventCount) {
     Event* nextEvent = chart->events + currentIndex;
-    EventType type = static_cast<EventType>((nextEvent->data & EVENT_TYPE));
+    EventType type = static_cast<EventType>((nextEvent->data() & EVENT_TYPE));
 
     switch (type) {
         // case EventType::SET_TEMPO:
@@ -65,7 +65,7 @@ void ChartReader::logDebugInfo<CHART_DEBUG>() {
     }
     LOGSTR("EVENT:", 11);
     LOGSTR(typeStr, 12);
-    LOGN(nextEvent->timestamp, 13);
+    LOGN(nextEvent->timestamp(), 13);
     LOGSTR("-> " + DSTR(nextEvent->param), 14);
   }
 

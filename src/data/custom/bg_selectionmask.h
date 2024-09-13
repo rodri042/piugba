@@ -16,6 +16,6 @@ const struct {
   const unsigned int MAP_TOTAL_TILES;
   const unsigned int PALETTE_START_INDEX;
   const unsigned int PALETTE_LENGTH;
-} BG_SELECTIONMASK_METADATA = {2, 224, 256, 496, 18, 224, 416, 1024, 251, 4};
+} BG_SELECTIONMASK_METADATA = {2, 224, 256, 496, 18, 224, 416, 1024, 250, 4};
 
 #endif  // BG_SELECTIONMASK_H

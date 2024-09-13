@@ -36,6 +36,8 @@ class StageBreakScene : public Scene {
   void setUpSpritesPalette();
   void setUpBackground();
 
+  void updateStats();
+
   void animate();
   void finish();
   void processMultiplayerUpdates();

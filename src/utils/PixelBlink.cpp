@@ -6,9 +6,17 @@
 
 PixelBlink::PixelBlink(u32 targetValue) {
   this->targetValue = targetValue;
+  this->baseTargetValue = targetValue;
 }
 
 void PixelBlink::blink() {
+  targetValue = baseTargetValue;
+  step = 0;
+  isBlinking = true;
+}
+
+void PixelBlink::blink(u32 customTargetValue) {
+  targetValue = customTargetValue;
   step = 0;
   isBlinking = true;
 }

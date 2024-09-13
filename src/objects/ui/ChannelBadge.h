@@ -9,6 +9,7 @@ class ChannelBadge {
  public:
   ChannelBadge(u32 x, u32 y, bool reuseTiles);
 
+  void tick();
   void setType(Channel type);
   void hide();
 
@@ -16,9 +17,11 @@ class ChannelBadge {
 
  private:
   std::unique_ptr<Sprite> sprite;
-
   u32 x;
   u32 y;
+  Channel currentType = Channel::ORIGINAL;
+  u32 animationCount = 0;
+  bool animationFlag = false;
 };
 
 #endif  // CHANNEL_BADGE_H

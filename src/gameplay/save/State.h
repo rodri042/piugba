@@ -32,6 +32,7 @@ typedef struct {
   AdminSettings adminSettings;
   Mods mods;
   GameMode mode;
+  bool isShuffleMode;
 } RAMState;
 
 extern RAMState GameState;

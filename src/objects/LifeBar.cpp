@@ -157,10 +157,10 @@ CODE_IWRAM void LifeBar::paint(ForegroundPaletteManager* foregroundPalette) {
       }
     }
 
-    foregroundPalette->change(0, PALETTE_INDEXES[playerId][i], color);
+    pal_obj_bank[0][PALETTE_INDEXES[playerId][i]] = color;
+
     if (GameState.mods.colorFilter != ColorFilter::NO_FILTER)
-      SCENE_applyColorFilterIndex(foregroundPalette, 0,
-                                  PALETTE_INDEXES[playerId][i],
+      SCENE_applyColorFilterIndex(pal_obj_bank, 0, PALETTE_INDEXES[playerId][i],
                                   GameState.mods.colorFilter);
 
     isBorder = !isBorder;

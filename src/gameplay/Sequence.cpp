@@ -18,7 +18,9 @@
 #include "scenes/SelectionScene.h"
 #include "scenes/SongScene.h"
 #include "scenes/StartScene.h"
+#include "scenes/StatsScene.h"
 #include "scenes/TalkScene.h"
+#include "utils/SceneUtils.h"
 
 static std::shared_ptr<GBAEngine> _engine;
 static const GBFS_FILE* _fs;
@@ -63,11 +65,12 @@ Scene* SEQUENCE_getInitialScene() {
   }
 
   bool isPlaying = SAVEFILE_read8(SRAM->state.isPlaying);
+  bool isShuffleMode = ENV_ARCADE || (SAVEFILE_read8(SRAM->isShuffleMode) == 1);
   auto gameMode = SAVEFILE_getGameMode();
   SAVEFILE_write8(SRAM->state.isPlaying, false);
 
   if (isPlaying && gameMode == GameMode::DEATH_MIX)
-    return new DeathMixScene(_engine, _fs);
+    return new DeathMixScene(_engine, _fs, static_cast<MixMode>(isShuffleMode));
 
   if (isPlaying && !IS_MULTIPLAYER(gameMode))
     return new SelectionScene(_engine, _fs);
@@ -104,7 +107,6 @@ Scene* SEQUENCE_getMainScene() {
 }
 
 Scene* SEQUENCE_activateVideo(bool showSuccessMessage) {
-  SAVEFILE_write8(SRAM->adminSettings.ewramOverclock, true);
   auto videoState = videoStore->activate();
   switch (videoState) {
     case VideoStore::NO_SUPPORTED_FLASHCART: {
@@ -134,6 +136,7 @@ Scene* SEQUENCE_activateEWRAMOverclock() {
 }
 
 Scene* SEQUENCE_deactivateEWRAMOverclock() {
+  SCENE_unoverclockEWRAM();
   SAVEFILE_write8(SRAM->adminSettings.ewramOverclock, false);
   return SEQUENCE_halt(EWRAM_OVERCLOCK_DISABLED);
 }
@@ -186,42 +189,55 @@ void SEQUENCE_goToGameMode(GameMode gameMode) {
 
   u16 keys = ~REG_KEYS & KEY_ANY;
   bool isHoldingStart = KEY_STA(keys);
-  bool wasBonusMode = SAVEFILE_read8(SRAM->isBonusMode);
-  bool isBonusMode = SAVEFILE_bonusCount(_fs) > 0 && isHoldingStart;
+  bool isHoldingL = keys & KEY_L;
+  bool isHoldingR = keys & KEY_R;
   auto lastGameMode = SAVEFILE_getGameMode();
+  bool wasBonusMode =
+      lastGameMode == GameMode::ARCADE && SAVEFILE_read8(SRAM->isBonusMode);
+  bool isBonusMode = gameMode == GameMode::ARCADE &&
+                     SAVEFILE_bonusCount(_fs) > 0 && isHoldingStart;
+  bool isShuffleMode =
+      gameMode == GameMode::DEATH_MIX && (ENV_ARCADE || isHoldingStart);
+
   bool isTransitioningBetweenCampaignAndChallenges =
       (lastGameMode == GameMode::CAMPAIGN && IS_CHALLENGE(gameMode)) ||
       (IS_CHALLENGE(lastGameMode) && gameMode == GameMode::CAMPAIGN);
-  if ((lastGameMode != gameMode &&
-       !isTransitioningBetweenCampaignAndChallenges) ||
-      (gameMode == GameMode::ARCADE && lastGameMode == GameMode::ARCADE &&
-       wasBonusMode != isBonusMode)) {
-    bool shouldResetCursor =
-        !(IS_STORY(lastGameMode) && gameMode == GameMode::ARCADE &&
-          SAVEFILE_getMaxLibraryType() ==
-              static_cast<DifficultyLevel>(
-                  SAVEFILE_read8(SRAM->memory.difficultyLevel)) &&
-          !isBonusMode);
+  bool isTransitioningBetweenArcadeAndNonArcadeModes =
+      lastGameMode != gameMode && !isTransitioningBetweenCampaignAndChallenges;
+  bool isTransitioningBetweenBonusArcadeAndOtherMode =
+      wasBonusMode != isBonusMode;
 
-    auto songIndex = IS_STORY(gameMode) ? SAVEFILE_getLibrarySize() - 1 : 0;
+  if (isTransitioningBetweenArcadeAndNonArcadeModes ||
+      isTransitioningBetweenBonusArcadeAndOtherMode) {
+    bool arcadeAndCampaignUseTheSameLibrary =
+        SAVEFILE_getMaxLibraryType(true) ==
+        static_cast<DifficultyLevel>(
+            SAVEFILE_read8(SRAM->memory.difficultyLevel));
+    bool shouldKeepCursor = !isTransitioningBetweenBonusArcadeAndOtherMode &&
+                            arcadeAndCampaignUseTheSameLibrary;
+
+    bool shouldResetCursor = !shouldKeepCursor;
     SAVEFILE_write8(SRAM->memory.numericLevel, 0);
     if (shouldResetCursor) {
+      auto songIndex = IS_STORY(gameMode) ? SAVEFILE_getLibrarySize() - 1 : 0;
       SAVEFILE_write8(SRAM->memory.pageIndex, Div(songIndex, PAGE_SIZE));
       SAVEFILE_write8(SRAM->memory.songIndex, DivMod(songIndex, PAGE_SIZE));
     }
-    SAVEFILE_write8(SRAM->adminSettings.arcadeCharts, ArcadeChartsOpts::SINGLE);
   }
 
   SAVEFILE_write8(SRAM->state.gameMode, gameMode);
   SAVEFILE_write8(SRAM->isBonusMode, false);
+  SAVEFILE_write8(SRAM->isShuffleMode, false);
   if (IS_MULTIPLAYER(gameMode)) {
-    linkUniversal->setProtocol(isHoldingStart
+    linkUniversal->setProtocol(isHoldingL ? LinkUniversal::Protocol::CABLE
+                               : isHoldingR
                                    ? LinkUniversal::Protocol::WIRELESS_SERVER
                                    : LinkUniversal::Protocol::AUTODETECT);
 
     SEQUENCE_goToMultiplayerGameMode(gameMode);
   } else if (gameMode == GameMode::DEATH_MIX) {
-    goTo(new DeathMixScene(_engine, _fs));
+    SAVEFILE_write8(SRAM->isShuffleMode, isShuffleMode);
+    goTo(new DeathMixScene(_engine, _fs, static_cast<MixMode>(isShuffleMode)));
   } else {
     SAVEFILE_write8(SRAM->isBonusMode, isBonusMode);
 
@@ -322,6 +338,12 @@ void SEQUENCE_goToMessageOrSong(Song* song, Chart* chart, Chart* remoteChart) {
 
 void SEQUENCE_goToWinOrSelection(bool isLastSong) {
   auto gameMode = SAVEFILE_getGameMode();
+
+  if (gameMode == GameMode::DEATH_MIX && GameState.isShuffleMode &&
+      isLastSong) {
+    goTo(new DeathMixScene(_engine, _fs, MixMode::SHUFFLE));
+    return;
+  }
 
   if ((IS_STORY(gameMode) || gameMode == GameMode::DEATH_MIX) && isLastSong)
     goTo(new TalkScene(

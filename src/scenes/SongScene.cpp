@@ -1001,7 +1001,8 @@ void SongScene::continueDeathMix() {
 
     engine->transitionIntoScene(
         new DanceGradeScene(
-            engine, fs, std::move(evaluation), NULL, "DeathMix",
+            engine, fs, std::move(evaluation), NULL,
+            deathMix->mixMode == MixMode::DEATH ? "DeathMix" : "Shuffle!",
             deathMix->mixMode == MixMode::DEATH
                 ? (chart->difficulty == DifficultyLevel::NORMAL ? "Normal"
                    : chart->difficulty == DifficultyLevel::HARD ? "Hard"

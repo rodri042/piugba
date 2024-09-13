@@ -375,7 +375,7 @@ import: check-env
 	./scripts/importer/run.sh --directory "$(SONGS)" --videolib="$(VIDEOLIB)" --hqaudiolib="$(HQAUDIOLIB)" --boss=$(BOSS) --arcade=$(ARCADE) --fast=$(FAST) --videoenable=$(VIDEOENABLE) --hqaudioenable=$(HQAUDIOENABLE)
 	cd src/data/content/_compiled_files && gbfs ../files.gbfs *
 
-pkg: check-env
+pkg:
 	./scripts/package.sh "piugba.gba" "src/data/content/files.gbfs"
 
 package: check-env build pkg

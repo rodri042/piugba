@@ -892,8 +892,11 @@ void SongScene::onAbort() {
   unload();
 
   if (deathMix != NULL)
-    engine->transitionIntoScene(new DeathMixScene(engine, fs),
-                                new PixelTransitionEffect());
+    engine->transitionIntoScene(
+        new DeathMixScene(
+            engine, fs,
+            GameState.isShuffleMode ? MixMode::SHUFFLE : MixMode::DEATH),
+        new PixelTransitionEffect());
   else
     engine->transitionIntoScene(new SelectionScene(engine, fs),
                                 new PixelTransitionEffect());

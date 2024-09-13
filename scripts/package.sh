@@ -23,7 +23,7 @@ KB=$((1024))
 MAX_ROM_SIZE_KB=$((32 * $KB - 1))
 INITIAL_REQUIRED_SIZE_KB=1024
 
-ROM_SIZE=$(wc -c < $FILE_INPUT)
+ROM_SIZE=$(wc -c < "$FILE_INPUT")
 if [ $? -ne 0 ]; then
   exit 1
 fi
@@ -48,16 +48,16 @@ fi
 REQUIRED_SIZE_KB=$(($INITIAL_REQUIRED_SIZE_KB > $MAX_REQUIRED_SIZE_KB ? $MAX_REQUIRED_SIZE_KB : $INITIAL_REQUIRED_SIZE_KB))
 PAD_NEEDED=$((($REQUIRED_SIZE_KB * $KB) - $ROM_SIZE))
 
-cp $FILE_INPUT $FILE_TMP
+cp "$FILE_INPUT" "$FILE_TMP"
 if [ $? -ne 0 ]; then
   exit 1
 fi
-dd if=/dev/zero bs=1 count=$PAD_NEEDED >> $FILE_TMP
+dd if=/dev/zero bs=$PAD_NEEDED count=1 >> "$FILE_TMP"
 if [ $? -ne 0 ]; then
   exit 1
 fi
-cat $FILE_TMP $DATA > $FILE_OUTPUT
+cat "$FILE_TMP" "$DATA" > "$FILE_OUTPUT"
 if [ $? -ne 0 ]; then
   exit 1
 fi
-rm $FILE_TMP
+rm "$FILE_TMP"

@@ -55,6 +55,7 @@ void ControlsScene::load() {
 
   setUpSpritesPalette();
   setUpBackground();
+
   pixelBlink = std::unique_ptr<PixelBlink>{new PixelBlink(PIXEL_BLINK_LEVEL)};
 
   setUpArrows();

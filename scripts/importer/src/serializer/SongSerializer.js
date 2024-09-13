@@ -185,7 +185,7 @@ const EVENT_SERIALIZERS = {
           : (((scrollBpm & 0xffff) << 16) | scrollChangeFrames) & 0xffffffff;
 
       this.UInt32LE(combine(event.timestamp, event.type))
-        .UInt32LE(normalizeInt(event.bpm))
+        .UInt32LE(buildBPM(normalizeInt(event.bpm)))
         .UInt32LE(composedScrollBpm[0])
         .UInt32LE(
           autoVelocityFactor >= 1 || autoVelocityFactor === 0
@@ -229,15 +229,35 @@ const combine = (timestamp, data, isFake = 0) => {
   return value[0];
 };
 
+const buildBPM = (normalizedBpm) => {
+  if (normalizedBpm > MAX_BPM) normalizedBpm = MAX_BPM;
+
+  let beatDurationFrames = Math.round(FRAMES_PER_MINUTE / normalizedBpm);
+  if (beatDurationFrames > MAX_BEAT_DURATION_FRAMES)
+    beatDurationFrames = MAX_BEAT_DURATION_FRAMES;
+
+  const serialized = new Uint32Array(1);
+  serialized[0] =
+    ((beatDurationFrames & MAX_BEAT_DURATION_FRAMES) << 20) |
+    (normalizedBpm & MAX_BPM);
+
+  return serialized[0];
+};
+
 const normalizeInt = (number) => {
   if (number === Infinity || number > INFINITY) return INFINITY;
-  return Math.round(number);
+  const array = new Uint32Array(1);
+  array[0] = Math.round(number);
+  return array[0];
 };
 
 const TITLE_LEN = 30 + 1; // +1 = \0;
 const ARTIST_LEN = 26 + 1; // +1 = \0;
 const MESSAGE_LEN = 25 + 2 + 25 + 2 + 25 + 2 + 25 + 1; // +2 = \r\n ; +1 = \0
 const INFINITY = 0xffffffff;
+const MAX_BPM = 0b11111111111111111111;
+const MAX_BEAT_DURATION_FRAMES = 0b111111111111;
+const FRAMES_PER_MINUTE = 60 * 60;
 
 const ARROW_MASKS = [
   0b00001000,

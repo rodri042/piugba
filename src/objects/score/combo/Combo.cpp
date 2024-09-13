@@ -6,46 +6,57 @@
 #include "objects/ArrowInfo.h"
 #include "utils/SpriteUtils.h"
 
-const u32 MAX_COMBO = 999;
-const u32 DIGITS = 3;
 const u32 DIGITS_POSITION_X = 7;
 const u32 DIGITS_POSITION_Y = 91;
+const u32 NUMBER_WIDTH_3_DIGITS = 26;
+const u32 NUMBER_WIDTH_4_DIGITS = 22;
+const int OFFSET_3_DIGITS = -NUMBER_WIDTH_3_DIGITS;
+const int OFFSET_4_DIGITS = -7;
 
 Combo::Combo(u8 playerId) {
   this->playerId = playerId;
 
   title = std::unique_ptr<ComboTitle>{new ComboTitle(playerId)};
 
-  for (u32 i = 0; i < DIGITS; i++) {
+  if (SAVEFILE_isUsingModernTheme())
+    offsetX = -1;
+
+  for (u32 i = 0; i < COMBO_DIGITS; i++) {
     auto digit = std::unique_ptr<Digit>{new Digit(
         DigitSize::BIG,
         (isDouble() ? GAME_POSITION_X[1] : GameState.positionX[playerId]) +
-            DIGITS_POSITION_X,
+            DIGITS_POSITION_X + offsetX + (i > 0 ? OFFSET_3_DIGITS : 0),
         GameState.scorePositionY + DIGITS_POSITION_Y, i, playerId > 0)};
     digits.push_back(std::move(digit));
   }
 }
 
 void Combo::setValue(int value) {
+  u32 oldValue = this->value;
+
   bool isRed = value < 0;
   u32 absValue = min(abs(value), MAX_COMBO);
 
   this->value = absValue;
-  digits[0]->set(THREE_DIGITS_LUT[absValue * LUT_DIGITS], isRed);
-  digits[1]->set(THREE_DIGITS_LUT[absValue * LUT_DIGITS + 1], isRed);
-  digits[2]->set(THREE_DIGITS_LUT[absValue * LUT_DIGITS + 2], isRed);
 
-  // Without optimizations:
-  // digits[0]->set(Div(absValue, 100), isRed);
-  // digits[1]->set(Div(DivMod(absValue, 100), 10), isRed);
-  // digits[2]->set(DivMod(absValue, 10), isRed);
+  for (int i = COMBO_DIGITS - 1; i >= 0; i--) {
+    digits[i]->set(absValue % 10, isRed);
+    absValue /= 10;
+  }
+
+  bool had4Digits = oldValue > 999;
+  bool has4Digits = this->value > 999;
+  if (has4Digits != had4Digits)
+    relocate();
 }
 
 void Combo::show() {
   title->show();
 
-  for (auto& it : digits)
-    it->show();
+  for (auto& it : digits) {
+    if (it->shouldBeVisible())
+      it->show();
+  }
 }
 
 void Combo::hide() {
@@ -58,16 +69,19 @@ void Combo::hide() {
 void Combo::relocate() {
   title->relocate();
 
-  for (u32 i = 0; i < DIGITS; i++)
+  bool has4Digits = digits[0]->shouldBeVisible();
+  for (u32 i = 0; i < COMBO_DIGITS; i++)
     digits[i]->relocate(
-        DigitSize::BIG,
         (isDouble() ? GAME_POSITION_X[1] : GameState.positionX[playerId]) +
-            DIGITS_POSITION_X,
-        GameState.scorePositionY + DIGITS_POSITION_Y, i);
+            DIGITS_POSITION_X + offsetX +
+            (i > 0 && !has4Digits ? OFFSET_3_DIGITS : 0) +
+            (has4Digits ? OFFSET_4_DIGITS : 0),
+        GameState.scorePositionY + DIGITS_POSITION_Y,
+        has4Digits ? NUMBER_WIDTH_4_DIGITS : NUMBER_WIDTH_3_DIGITS);
 }
 
 void Combo::disableMosaic() {
-  for (u32 i = 0; i < DIGITS; i++)
+  for (u32 i = 0; i < COMBO_DIGITS; i++)
     digits[i]->get()->oam.attr0 =
         digits[i]->get()->oam.attr0 & 0b1110111111111111;
 }
@@ -75,8 +89,10 @@ void Combo::disableMosaic() {
 void Combo::tick() {
   title->tick();
 
-  for (auto& it : digits)
-    it->tick();
+  for (auto& it : digits) {
+    if (it->shouldBeVisible())
+      it->tick();
+  }
 }
 
 Combo::~Combo() {

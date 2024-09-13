@@ -18,7 +18,6 @@
     "lodash": "^4.17.19",
     "mkdirp": "^1.0.4",
     "node-getopt": "^0.3.2",
-    "readline-sync": "^1.4.10",
     "tmp": "^0.2.0"
   }
 }

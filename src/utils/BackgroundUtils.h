@@ -54,7 +54,7 @@ inline std::unique_ptr<Background> BACKGROUND_loadBackgroundFiles(
 
   return std::unique_ptr<Background>{
       new Background(bgIndex, backgroundTilesData, backgroundTilesLength,
-                     backgroundMapData, backgroundMapLength)};
+                     backgroundMapData, backgroundMapLength, true)};
 }
 
 inline void BACKGROUND_loadPalette(const unsigned int data[],

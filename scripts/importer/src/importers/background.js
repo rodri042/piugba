@@ -2,19 +2,20 @@ const utils = require("../utils");
 const $path = require("path");
 const _ = require("lodash");
 
-const COMMAND_BUILD = (input, output) =>
-  `magick "${input}" -resize ${RESOLUTION} -colors 254 "${output}"`;
+const COMMAND_BUILD = (input, output, colors = 254) =>
+  `magick "${input}" -resize ${RESOLUTION} -colors ${colors} "${output}"`;
 const COMMAND_BUILD_REMAP = (input, firstColorPalette, tempPalette, output) =>
   `magick "${input}" -resize ${RESOLUTION} -colors ${COLORS} -unique-colors "${tempPalette}" && ` +
   `magick "${firstColorPalette}" "${tempPalette}" +append "${tempPalette}" && ` +
   `magick "${input}" -resize ${RESOLUTION} -colors ${COLORS} -remap "${tempPalette}" "${output}" && ` +
   `rm "${tempPalette}"`;
-const COMMAND_ENCODE = (input) => `grit "${input}" -gt -gB8 -mRtf -mLs -ftb`;
+const COMMAND_ENCODE = (input) =>
+  `grit "${input}" -gzl -gt -gB8 -mRtf -mLs -ftb`;
 const COMMAND_MD5SUM = (input) => `md5sum "${input}" | cut -d " " -f 1`;
 const COMMAND_CLEANUP = (tmp1, tmp2) =>
   `${COMMAND_RM(tmp1)} && ${COMMAND_RM(tmp2)}`;
 const COMMAND_RM = (file) => `rm "${file}"`;
-const COMMAND_FIX = (input) => `pngfix -f "${input}`;
+const COMMAND_FIX = (input) => `pngfix -f "${input}"`;
 const RESOLUTION = "240x160!";
 const COLORS = "253";
 const EXTENSIONS_TMP = ["pal.bmp", "bmp", "h"];
@@ -29,7 +30,8 @@ module.exports = async (
   name,
   filePath,
   outputPath,
-  transparentColor = null
+  transparentColor = null,
+  colors = 254
 ) => {
   const tempFiles = EXTENSIONS_TMP.map((it) =>
     $path.join(outputPath, `${name}.${it}`)
@@ -44,7 +46,7 @@ module.exports = async (
             tempFiles[0],
             tempFiles[1]
           )
-        : COMMAND_BUILD(filePath, tempFiles[1])
+        : COMMAND_BUILD(filePath, tempFiles[1], colors)
     );
   } catch (originalException) {
     try {

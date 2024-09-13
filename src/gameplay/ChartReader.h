@@ -16,9 +16,10 @@
 #include "utils/pool/ObjectPool.h"
 
 const u8 ARROW_MIRROR_INDEXES[] = {0, 1, 2, 3, 4, 3, 4, 2, 0, 1};
-const u32 FRACUMUL_RATE_AUDIO_LAG[] = {2018634629, 3135326125, 3693671874, 0,
-                                       472446402,  1116691497, 2319282339};
-// (0.86, 0.73, 0.47, 0, (1+)0.11, (1+)0.26, (1)+0.54)
+const u32 FRACUMUL_RATE_SCALE[] = {2018634629, 3178275798, 3736621547, 0,
+                                   558345748,  1116691497, 2276332666};
+// (0.47, 0.74, 0.87, 0, (1+)0.13, (1+)0.26, (1)+0.53)
+// (empirical measure, checked multiple times)
 
 class ChartReader : public TimingProvider {
  public:
@@ -52,14 +53,19 @@ class ChartReader : public TimingProvider {
     return this->multiplier != oldMultiplier;
   }
 
-  inline void syncRate(u32 base, int rate) {
-    rateAudioLag = audioLag;
+  inline void syncRate(u32 rateLevels, int rate) {
+    this->currentRate = rate;
+    rateAudioLag = scaleByRate(rateLevels, audioLag, rate);
+    beatDurationFrames = -1;
+  }
+
+  inline int scaleByRate(u32 origin, int number, int rate) {
     if (rate > 0)
-      rateAudioLag +=
-          MATH_fracumul(audioLag, FRACUMUL_RATE_AUDIO_LAG[base + rate]);
+      number += MATH_fracumul(number, FRACUMUL_RATE_SCALE[origin + rate]);
     if (rate < 0)
-      rateAudioLag =
-          MATH_fracumul(audioLag, FRACUMUL_RATE_AUDIO_LAG[base + rate]);
+      number = MATH_fracumul(number, FRACUMUL_RATE_SCALE[origin + rate]);
+
+    return number;
   }
 
   inline int getJudgementOffset() {
@@ -114,6 +120,7 @@ class ChartReader : public TimingProvider {
   u32 stoppedMs = 0;
   u32 asyncStoppedMs = 0;
   u32 warpedMs = 0;
+  int currentRate = 0;
 
   template <typename F>
   inline void processEvents(Event* events,
@@ -124,10 +131,10 @@ class ChartReader : public TimingProvider {
     u32 currentIndex = index;
     bool skipped = false;
 
-    while (targetMsecs >= events[currentIndex].timestamp &&
+    while (targetMsecs >= events[currentIndex].timestamp() &&
            currentIndex < count) {
       auto event = events + currentIndex;
-      EventType type = static_cast<EventType>((event->data & EVENT_TYPE));
+      EventType type = static_cast<EventType>(event->data() & EVENT_TYPE);
 
       if (event->handled[playerId]) {
         currentIndex++;

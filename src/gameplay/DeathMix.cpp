@@ -4,15 +4,19 @@
 
 #include "save/SaveFile.h"
 
-DeathMix::DeathMix(const GBFS_FILE* fs, DifficultyLevel difficultyLevel) {
+DeathMix::DeathMix(const GBFS_FILE* fs, MixMode mixMode) {
+  this->mixMode = mixMode;
+
   auto library = std::unique_ptr<Library>{new Library(fs)};
   u32 librarySize = SAVEFILE_getLibrarySize();
   u32 pages =
       Div(librarySize, PAGE_SIZE) + (DivMod(librarySize, PAGE_SIZE) > 0);
 
   for (u32 i = 0; i < pages; i++)
-    library->loadSongs(songFiles, difficultyLevel, i * PAGE_SIZE);
+    library->loadSongs(songFiles, DifficultyLevel::CRAZY, i * PAGE_SIZE);
+  // (difficulty level doesn't matter here, as the order will be random anyway)
 
+  // randomize song order
   for (int i = songFiles.size() - 1; i > 0; --i) {
     int j = qran_range(0, i + 1);
     std::swap(songFiles[i], songFiles[j]);
@@ -22,7 +26,6 @@ DeathMix::DeathMix(const GBFS_FILE* fs, DifficultyLevel difficultyLevel) {
     songFiles[i]->index = i;
 
   this->fs = fs;
-  this->difficultyLevel = difficultyLevel;
   this->next = 0;
   this->total = librarySize;
 }
@@ -32,9 +35,13 @@ SongChart DeathMix::getNextSongChart() {
     return SongChart{.song = NULL, .chart = NULL};
 
   Song* tempSong = SONG_parse(fs, songFiles[next].get());
-  u8 index = SONG_findChartIndexByDifficultyLevel(tempSong, difficultyLevel);
+  int index = getNextChartIndex(tempSong);
   SONG_free(tempSong);
-  Song* song = SONG_parse(fs, songFiles[next].get(), std::vector<u8>{index});
+  if (index == -1)  // (should not happen, just a fail-safe)
+    return SongChart{.song = NULL, .chart = NULL};
+
+  Song* song =
+      SONG_parse(fs, songFiles[next].get(), std::vector<u8>{(u8)index});
   Chart* chart = song->charts + index;
 
   next++;

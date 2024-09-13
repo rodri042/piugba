@@ -7,5 +7,7 @@ build/
 *.sa1
 *.sa2
 undefined.pius
+.last_env
+.last_buildtype
 
 src/data/content

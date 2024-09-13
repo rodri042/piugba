@@ -11,7 +11,7 @@ const u32 MESSAGE_LEN = 107;
 #define DATA_EWRAM __attribute__((section(".ewram")))
 #define MAX_EVENTS 3250
 #define ALLOCATION_SIZE (MAX_EVENTS * sizeof(Event))
-// (78000 bytes) -> (3250)*24
+// (60000 bytes) -> (3000)*20
 
 typedef struct {
   Event events[MAX_EVENTS];
@@ -166,6 +166,16 @@ u32 SONG_findChartIndexByDifficultyLevel(Song* song,
   return 0;
 }
 
+int SONG_findSingleChartIndexByNumericLevel(Song* song, u8 numericLevel) {
+  for (u32 i = 0; i < song->chartCount; i++) {
+    if (song->charts[i].type == ChartType::SINGLE_CHART &&
+        song->charts[i].level == numericLevel)
+      return i;
+  }
+
+  return -1;
+}
+
 Chart* SONG_findChartByDifficultyLevel(Song* song,
                                        DifficultyLevel difficultyLevel) {
   u32 index = SONG_findChartIndexByDifficultyLevel(song, difficultyLevel);
@@ -218,14 +228,9 @@ void parseEvents(Event* events,
   for (u32 j = 0; j < count; j++) {
     auto event = events + j;
 
-    u32 timestampAndData = parse_u32le(data, cursor);
-    event->isFake = timestampAndData & 1;
-    event->timestamp = (timestampAndData >> 1) & 0x7fffff;
-    if (event->timestamp & 0x400000)  // (sign extension)
-      event->timestamp |= 0xff800000;
-    event->data = (timestampAndData >> 24) & 0xff;
+    event->timestampAndData = parse_u32le(data, cursor);
 
-    auto eventType = static_cast<EventType>(event->data & EVENT_TYPE);
+    auto eventType = static_cast<EventType>(event->data() & EVENT_TYPE);
     event->data2 =
         EVENT_HAS_DATA2(eventType, isDouble) ? parse_u8(data, cursor) : 0;
 

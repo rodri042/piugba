@@ -1,39 +1,45 @@
 #include "LinkWireless.hpp"
 
+// [!]
+// This library has some tweaks (marked with "[!]") for piuGBA.
+// You should check out the gba-link-connection's original code instead of this.
+
+// [!]
 #pragma GCC push_options
 #pragma GCC optimize("Os")
 
 #ifdef LINK_WIRELESS_PUT_ISR_IN_IWRAM
+
 LINK_WIRELESS_CODE_IWRAM void LinkWireless::_onSerial() {
-  // [!]
-  if (!isHandlingInterrupt)
-    isHandlingInterrupt = true;
-  else
-    return;
-  REG_IME = 1;
+#ifdef LINK_WIRELESS_ENABLE_NESTED_IRQ
+  interrupt = true;
+  LINK_WIRELESS_BARRIER;
+  Link::_REG_IME = 1;
+#endif
+
   __onSerial();
-  isHandlingInterrupt = false;
+
+#ifdef LINK_WIRELESS_ENABLE_NESTED_IRQ
+  irqEnd();
+#endif
 }
 LINK_WIRELESS_CODE_IWRAM void LinkWireless::_onTimer() {
-  // [!]
-  if (!isHandlingInterrupt)
-    isHandlingInterrupt = true;
-  else
+#ifdef LINK_WIRELESS_ENABLE_NESTED_IRQ
+  if (interrupt)
     return;
-  REG_IME = 1;
+
+  interrupt = true;
+  LINK_WIRELESS_BARRIER;
+  Link::_REG_IME = 1;
+#endif
+
   __onTimer();
-  isHandlingInterrupt = false;
+
+#ifdef LINK_WIRELESS_ENABLE_NESTED_IRQ
+  irqEnd();
+#endif
 }
-LINK_WIRELESS_CODE_IWRAM void LinkWireless::_onACKTimer() {
-  // [!]
-  if (!isHandlingInterrupt)
-    isHandlingInterrupt = true;
-  else
-    return;
-  REG_IME = 1;
-  __onACKTimer();
-  isHandlingInterrupt = false;
-}
+
 #endif
 
 #pragma GCC pop_options

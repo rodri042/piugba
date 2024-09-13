@@ -6,43 +6,43 @@
 #include "multiplayer/PS2Keyboard.h"
 
 inline bool PS2_P1_DOWNLEFT() {
-  return ps2Keyboard->arrows[0];
+  return ps2Keyboard->keys.arrows[0];
 }
 
 inline bool PS2_P1_UPLEFT() {
-  return ps2Keyboard->arrows[1];
+  return ps2Keyboard->keys.arrows[1];
 }
 
 inline bool PS2_P1_CENTER() {
-  return ps2Keyboard->arrows[2];
+  return ps2Keyboard->keys.arrows[2];
 }
 
 inline bool PS2_P1_UPRIGHT() {
-  return ps2Keyboard->arrows[3];
+  return ps2Keyboard->keys.arrows[3];
 }
 
 inline bool PS2_P1_DOWNRIGHT() {
-  return ps2Keyboard->arrows[4];
+  return ps2Keyboard->keys.arrows[4];
 }
 
 inline bool PS2_P2_DOWNLEFT() {
-  return ps2Keyboard->arrows[5];
+  return ps2Keyboard->keys.arrows[5];
 }
 
 inline bool PS2_P2_UPLEFT() {
-  return ps2Keyboard->arrows[6];
+  return ps2Keyboard->keys.arrows[6];
 }
 
 inline bool PS2_P2_CENTER() {
-  return ps2Keyboard->arrows[7];
+  return ps2Keyboard->keys.arrows[7];
 }
 
 inline bool PS2_P2_UPRIGHT() {
-  return ps2Keyboard->arrows[8];
+  return ps2Keyboard->keys.arrows[8];
 }
 
 inline bool PS2_P2_DOWNRIGHT() {
-  return ps2Keyboard->arrows[9];
+  return ps2Keyboard->keys.arrows[9];
 }
 
 inline bool PS2_DOWNLEFT() {
@@ -66,27 +66,27 @@ inline bool PS2_DOWNRIGHT() {
 }
 
 inline bool PS2_START() {
-  return ps2Keyboard->start1 || ps2Keyboard->start2;
+  return ps2Keyboard->keys.start1 || ps2Keyboard->keys.start2;
 }
 
 inline bool PS2_SELECT() {
-  return ps2Keyboard->select1 || ps2Keyboard->select2;
+  return ps2Keyboard->keys.select1 || ps2Keyboard->keys.select2;
 }
 
 inline bool PS2_LEFT() {
-  return ps2Keyboard->left;
+  return ps2Keyboard->keys.left;
 }
 
 inline bool PS2_RIGHT() {
-  return ps2Keyboard->right;
+  return ps2Keyboard->keys.right;
 }
 
 inline bool PS2_UP() {
-  return ps2Keyboard->up;
+  return ps2Keyboard->keys.up;
 }
 
 inline bool PS2_DOWN() {
-  return ps2Keyboard->down;
+  return ps2Keyboard->keys.down;
 }
 
 inline bool GBA_DOWNLEFT(u16 keys) {

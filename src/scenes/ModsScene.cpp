@@ -22,7 +22,6 @@
 #define OPTION_RESET 12
 
 const u32 TEXT_BLEND_ALPHA = 12;
-const int TEXT_OFFSET_Y = 1;
 
 const char* COLOR_FILTERS[] = {
     "OFF",      "VIBRANT", "CONTRAST",  "POSTERIZE", "WARM",  "COLD",

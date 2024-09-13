@@ -5,6 +5,8 @@
  * Created on December 15, 2015, 1:50 PM
  */
 
+// EverDrive-GBA IO 05.09.16
+
 #ifndef BIOS_H
 #define BIOS_H
 
@@ -47,7 +49,6 @@ bool bi_init_sd_only();
 void bi_init();
 void bi_lock_regs();
 void bi_unlock_regs();
-void bi_dma_mem(void* src, void* dst, int len);
 
 void bi_sd_cmd_wr(u8 data);
 u8 bi_sd_cmd_rd();
@@ -58,25 +59,6 @@ u8 bi_sd_dma_rd(void* dst, int slen);
 void bi_sd_mode(u8 mode);
 void bi_sd_speed(u8 speed);
 
-u8 bi_eep_write(void* src, u16 addr, u16 len);
-u8 bi_eep_read(void* dst, u16 addr, u16 len);
-void bi_set_eep_size(u8 size);
 void bi_set_save_type(u8 save_type);
-
-u16 bi_flash_id();
-void bi_flash_erase_chip();
-void bi_flash_erase_sector(u8 sector);
-void bi_flash_write(void* src, u32 addr, u32 len);
-void bi_flash_set_bank(u8 bank);
-
-void bi_sram_read(void* dst, u32 offset, u32 len);
-void bi_sram_write(void* src, u32 offset, u32 len);
-u16 bi_get_fpga_ver();
-
-void bi_rtc_on();
-void bi_rtc_off();
-
-void bi_set_rom_bank(u8 bank);
-void bi_set_rom_mask(u32 rom_size);
 
 #endif /* BIOS_H */

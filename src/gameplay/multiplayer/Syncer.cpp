@@ -209,10 +209,16 @@ void Syncer::resetGameState() {
   $libraryType = 0;
   $completedSongs = 0;
 
+  $remoteNumericLevelIndex = -1;
   $remoteNumericLevel = -1;
+  $remoteLastNumericLevel = 0;
   SAVEFILE_write8(SRAM->memory.numericLevel, 0);
   SAVEFILE_write8(SRAM->memory.pageIndex, 0);
   SAVEFILE_write8(SRAM->memory.songIndex, 0);
+  SAVEFILE_write32(SRAM->lastNumericLevel, 0);
+  SAVEFILE_write8(
+      SRAM->adminSettings.arcadeCharts,
+      isCoop() ? ArcadeChartsOpts::DOUBLE : ArcadeChartsOpts::SINGLE);
 
   resetSongState();
 }

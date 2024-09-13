@@ -94,8 +94,11 @@ std::vector<Sprite*> SelectionScene::sprites() {
   sprites.push_back(multiplier->get());
   progress->render(&sprites);
 
-  if (!IS_STORY(SAVEFILE_getGameMode()))
+  if (!IS_STORY(SAVEFILE_getGameMode())) {
     sprites.push_back(numericLevelBadge->get());
+    if (isVs())
+      sprites.push_back(remoteNumericLevelBadge->get());
+  }
 
   return sprites;
 }
@@ -131,10 +134,18 @@ void SelectionScene::load() {
     auto level = SAVEFILE_read8(SRAM->memory.difficultyLevel);
     difficulty->setValue(static_cast<DifficultyLevel>(level));
   } else {
-    numericLevelBadge = std::unique_ptr<Button>{
-        new Button(ButtonType::LEVEL_METER, NUMERIC_LEVEL_BADGE_X,
-                   NUMERIC_LEVEL_BADGE_Y, false)};
+    numericLevelBadge = std::unique_ptr<Button>{new Button(
+        ButtonType::LEVEL_METER,
+        NUMERIC_LEVEL_BADGE_X - (isVs() ? NUMERIC_LEVEL_BADGE_MARGIN : 0),
+        NUMERIC_LEVEL_BADGE_Y, false)};
     numericLevelBadge->get()->setPriority(ID_HIGHLIGHTER);
+    if (isVs()) {
+      remoteNumericLevelBadge = std::unique_ptr<Button>{
+          new Button(ButtonType::LEVEL_METER,
+                     NUMERIC_LEVEL_BADGE_X + NUMERIC_LEVEL_BADGE_MARGIN,
+                     NUMERIC_LEVEL_BADGE_Y, true)};
+      remoteNumericLevelBadge->get()->setPriority(ID_HIGHLIGHTER);
+    }
 
     difficulty->setValue(DifficultyLevel::NUMERIC);
     SPRITE_hide(multiplier->get());
@@ -153,7 +164,7 @@ void SelectionScene::tick(u16 keys) {
     return;
 
   if (SEQUENCE_isMultiplayerSessionDead()) {
-    player_stop();
+    stop();
     SEQUENCE_goToMultiplayerGameMode(SAVEFILE_getGameMode());
     return;
   }
@@ -200,6 +211,9 @@ void SelectionScene::tick(u16 keys) {
   animationFrame++;
   if (animationFrame >= BREATH_STEPS)
     animationFrame = 0;
+
+  for (auto& channelBadge : channelBadges)
+    channelBadge->tick();
 }
 
 void SelectionScene::render() {
@@ -210,10 +224,8 @@ void SelectionScene::render() {
     init++;
     return;
   } else if (init == 1) {
-    if (isDouble()) {
-      SCENE_applyColorFilter(foregroundPalette.get(), ColorFilter::ALIEN);
-      VBlankIntrWait();
-    }
+    if (isDouble())
+      SCENE_applyColorFilter(pal_obj_bank, ColorFilter::DOUBLE_FILTER);
 
     highlighter->initialize(selected);
     EFFECT_setBlendAlpha(blendAlpha);
@@ -221,17 +233,6 @@ void SelectionScene::render() {
     BACKGROUND_enable(true, true, true, false);
     SPRITE_enable();
     init++;
-  }
-
-  if (pendingAudio != "") {
-    player_play(pendingAudio.c_str(),
-                isMultiplayer() || active_flashcart == EZ_FLASH_OMEGA);
-    pendingAudio = "";
-  }
-
-  if (pendingSeek > 0) {
-    player_seek(pendingSeek);
-    pendingSeek = 0;
   }
 }
 
@@ -259,6 +260,7 @@ void SelectionScene::setUpBackground() {
   bg->persist();
 
   TextStream::instance().setFontColor(TEXT_COLOR);
+  TextStream::instance().setFontSubcolor(text_bg_palette_default_subcolor);
 
   loadChannels();
   loadProgress();
@@ -349,10 +351,19 @@ void SelectionScene::scrollTo(u32 page, u32 selected) {
 }
 
 void SelectionScene::setNumericLevel(u8 numericLevelIndex) {
-  if (numericLevelIndex == getSelectedNumericLevelIndex())
+  if (numericLevelIndex == getSelectedNumericLevelIndex()) {
+    updateLastNumericLevel();
     return;
+  }
 
   SAVEFILE_write8(SRAM->memory.numericLevel, numericLevelIndex);
+  updateLastNumericLevel();
+  updateSelection(true);
+  pixelBlink->blink();
+}
+
+void SelectionScene::setRemoteNumericLevel(u8 remoteNumericLevelIndex) {
+  syncer->setRemoteNumericLevel(remoteNumericLevelIndex, -1);
   updateSelection(true);
   pixelBlink->blink();
 }
@@ -361,11 +372,11 @@ void SelectionScene::goToSong() {
   if (numericLevels.empty())
     return;
 
-  player_stop();
+  stop();
   confirmed = false;
 
   bool isStory = IS_STORY(SAVEFILE_getGameMode());
-  bool hasRemoteChart = isVs() && syncer->$remoteNumericLevel != -1;
+  bool hasRemoteChart = isVs() && syncer->$remoteNumericLevelIndex != -1;
   std::vector<u8> chartIndexes;
 
   Song* tempSong = SONG_parse(fs, getSelectedSong());
@@ -377,7 +388,7 @@ void SelectionScene::goToSong() {
         tempSong, getSelectedNumericLevelIndex(), isDouble()));
     if (hasRemoteChart)
       chartIndexes.push_back(SONG_findChartIndexByNumericLevelIndex(
-          tempSong, (u8)syncer->$remoteNumericLevel, false));
+          tempSong, (u8)syncer->$remoteNumericLevelIndex, false));
   }
   SONG_free(tempSong);
 
@@ -386,17 +397,17 @@ void SelectionScene::goToSong() {
       isStory ? SONG_findChartByDifficultyLevel(song, difficulty->getValue())
               : SONG_findChartByNumericLevelIndex(
                     song, getSelectedNumericLevelIndex(), isDouble());
-  Chart* remoteChart = hasRemoteChart
-                           ? SONG_findChartByNumericLevelIndex(
-                                 song, (u8)syncer->$remoteNumericLevel, false)
-                           : NULL;
+  Chart* remoteChart =
+      hasRemoteChart ? SONG_findChartByNumericLevelIndex(
+                           song, (u8)syncer->$remoteNumericLevelIndex, false)
+                     : NULL;
 
   int customOffset = getCustomOffset();
   chart->customOffset = customOffset;
   chart->levelIndex = getSelectedNumericLevelIndex();
   if (remoteChart != NULL) {
     remoteChart->customOffset = customOffset;
-    remoteChart->levelIndex = (u8)syncer->$remoteNumericLevel;
+    remoteChart->levelIndex = (u8)syncer->$remoteNumericLevelIndex;
   }
 
   SEQUENCE_goToMessageOrSong(song, chart, remoteChart);
@@ -494,7 +505,7 @@ void SelectionScene::processMenuEvents() {
       playNow(SOUND_MOD);
       SAVEFILE_write8(SRAM->mods.multiplier, multiplier->change());
     } else if (!isCustomOffsetAdjustmentEnabled()) {
-      player_stop();
+      stop();
       engine->transitionIntoScene(new ModsScene(engine, fs),
                                   new PixelTransitionEffect());
     }
@@ -502,7 +513,7 @@ void SelectionScene::processMenuEvents() {
 
   if (isCustomOffsetAdjustmentEnabled() && multiplier->hasBeenReleasedNow()) {
     if (!multiplier->getHandledFlag()) {
-      player_stop();
+      stop();
       engine->transitionIntoScene(new ModsScene(engine, fs),
                                   new PixelTransitionEffect());
     }
@@ -513,7 +524,7 @@ void SelectionScene::processMenuEvents() {
     return;
 
   if (settingsMenuInput->hasBeenPressedNow()) {
-    player_stop();
+    stop();
     engine->transitionIntoScene(new SettingsScene(engine, fs),
                                 new PixelTransitionEffect());
   }
@@ -529,8 +540,6 @@ bool SelectionScene::onCustomOffsetChange(ArrowDirection selector, int offset) {
       unconfirm();
       updateSelection();
 
-      pendingAudio = "";
-      pendingSeek = 0;
       playNow(SOUND_MOD);
     }
 
@@ -557,7 +566,7 @@ bool SelectionScene::onDifficultyLevelChange(ArrowDirection selector,
     pixelBlink->blink();
 
     u32 lastUnlockedSongIndex = getLastUnlockedSongIndex();
-    player_stop();
+    stop();
     scrollTo(lastUnlockedSongIndex);
 
     return true;
@@ -580,7 +589,7 @@ bool SelectionScene::onNumericLevelChange(ArrowDirection selector,
       if (selector == ArrowDirection::UPRIGHT && !isDouble) {
         SAVEFILE_write8(SRAM->adminSettings.arcadeCharts,
                         ArcadeChartsOpts::DOUBLE);
-        player_stop();
+        stop();
         engine->transitionIntoScene(
             new SelectionScene(engine, fs, InitialLevel::FIRST_LEVEL),
             new PixelTransitionEffect());
@@ -588,7 +597,7 @@ bool SelectionScene::onNumericLevelChange(ArrowDirection selector,
       } else if (selector == ArrowDirection::UPLEFT && isDouble) {
         SAVEFILE_write8(SRAM->adminSettings.arcadeCharts,
                         ArcadeChartsOpts::SINGLE);
-        player_stop();
+        stop();
         engine->transitionIntoScene(
             new SelectionScene(engine, fs, InitialLevel::LAST_LEVEL),
             new PixelTransitionEffect());
@@ -627,7 +636,7 @@ bool SelectionScene::onSelectionChange(ArrowDirection selector,
       return true;
     }
 
-    player_stop();
+    stop();
 
     if (isOnPageEdge)
       setPage(page + direction, direction);
@@ -637,10 +646,8 @@ bool SelectionScene::onSelectionChange(ArrowDirection selector,
       pixelBlink->blink();
     }
 
-    if (isMultiplayer() && syncer->isMaster()) {
+    if (isMultiplayer() && syncer->isMaster())
       syncer->send(SYNC_EVENT_SONG_CHANGED, getSelectedSongIndex());
-      syncer->$remoteNumericLevel = -1;
-    }
 
     return true;
   }
@@ -660,14 +667,25 @@ void SelectionScene::updateSelection(bool isChangingLevel) {
   selectedSongId = song->id;
 
   updateLevel(song, isChangingLevel);
+  progress->setValue(getSelectedSongIndex() + 1, count);
   setNames(song->title, song->artist);
   Chart* chart = SONG_findChartByNumericLevelIndex(
       song, getSelectedNumericLevelIndex(), isDouble());
-  printNumericLevel(chart);
+  Chart* remoteChart = isVs() && syncer->$remoteNumericLevelIndex != -1
+                           ? SONG_findChartByNumericLevelIndex(
+                                 song, syncer->$remoteNumericLevelIndex, false)
+                           : NULL;
+  if (isVs() && syncer->$remoteNumericLevelIndex != -1 &&
+      syncer->$remoteNumericLevel == -1) {
+    syncer->$remoteLastNumericLevel = remoteChart->level;
+    syncer->setRemoteNumericLevel(syncer->$remoteNumericLevelIndex,
+                                  remoteChart->level);
+  }
+  printNumericLevel(chart, remoteChart);
   loadSelectedSongGrade();
   if (!isChangingLevel && initialLevel == InitialLevel::KEEP_LEVEL) {
-    pendingAudio = song->audioPath;
-    pendingSeek = song->sampleStart;
+    syncer->pendingAudio = song->audioPath;
+    syncer->pendingSeek = song->sampleStart;
   }
 
   SONG_free(song);
@@ -677,27 +695,26 @@ void SelectionScene::updateSelection(bool isChangingLevel) {
   highlighter->select(selected);
 
   if (initialLevel != InitialLevel::KEEP_LEVEL) {
-    pendingAudio = SOUND_MOD_STR;
+    syncer->pendingAudio = SOUND_MOD_STR;
+    syncer->pendingSeek = 0;
     initialLevel = InitialLevel::KEEP_LEVEL;
+    updateLastNumericLevel();
   }
 }
 
 void SelectionScene::updateLevel(Song* song, bool isChangingLevel) {
-  bool canUpdateLevel = false;
-  u8 currentLevel = 0;
+  // (!isChangingLevel = changing song)
 
-  if (!numericLevels.empty()) {
-    canUpdateLevel = true;
-    currentLevel = getSelectedNumericLevel();
+  if (!numericLevels.empty())
     numericLevels.clear();
-  }
 
   for (u32 i = 0; i < song->chartCount; i++)
     if (song->charts[i].isDouble == isDouble())
-      numericLevels.push_back(song->charts[i].level);
+      numericLevels.push_back((song->charts[i].type << 16) |
+                              song->charts[i].level);
 
-  if (canUpdateLevel && !isChangingLevel)
-    setClosestNumericLevel(currentLevel);
+  if (!isChangingLevel)
+    setClosestNumericLevel(getLastNumericLevel());
   if (getSelectedNumericLevelIndex() > numericLevels.size() - 1)
     setClosestNumericLevel(0);
 
@@ -714,6 +731,16 @@ void SelectionScene::updateLevel(Song* song, bool isChangingLevel) {
       SAVEFILE_write8(SRAM->memory.numericLevel, numericLevels.size() - 1);
     }
   }
+
+  if (isVs()) {
+    if (!isChangingLevel) {
+      int closest = getClosestLevelIndexTo(syncer->$remoteLastNumericLevel,
+                                           syncer->$remoteNumericLevel,
+                                           syncer->$remoteNumericLevelIndex);
+      if (closest > -1)
+        syncer->setRemoteNumericLevel(closest, numericLevels[closest] & 0xff);
+    }
+  }
 }
 
 void SelectionScene::confirm() {
@@ -725,8 +752,13 @@ void SelectionScene::confirm() {
       return;
 
     numericLevelBadge->get()->moveTo(
-        NUMERIC_LEVEL_BADGE_X,
+        numericLevelBadge->get()->getX(),
         NUMERIC_LEVEL_BADGE_Y + NUMERIC_LEVEL_BADGE_OFFSET_Y);
+    if (isVs()) {
+      remoteNumericLevelBadge->get()->moveTo(
+          remoteNumericLevelBadge->get()->getX(),
+          NUMERIC_LEVEL_BADGE_Y + NUMERIC_LEVEL_BADGE_OFFSET_Y);
+    }
   }
 
   playNow(SOUND_STEP);
@@ -734,15 +766,19 @@ void SelectionScene::confirm() {
   arrowSelectors[ArrowDirection::CENTER]->get()->moveTo(CENTER_X, CENTER_Y);
   TextStream::instance().scrollNow(0, TEXT_SCROLL_CONFIRMED);
   TextStream::instance().clear();
-  printNumericLevel(NULL, NUMERIC_LEVEL_BADGE_OFFSET_ROW);
+  printNumericLevel(NULL, NULL, NUMERIC_LEVEL_BADGE_OFFSET_ROW);
   SCENE_write(CONFIRM_MESSAGE, TEXT_ROW);
 }
 
 void SelectionScene::unconfirm() {
   if (confirmed) {
-    if (!IS_STORY(SAVEFILE_getGameMode()))
-      numericLevelBadge->get()->moveTo(NUMERIC_LEVEL_BADGE_X,
+    if (!IS_STORY(SAVEFILE_getGameMode())) {
+      numericLevelBadge->get()->moveTo(numericLevelBadge->get()->getX(),
                                        NUMERIC_LEVEL_BADGE_Y);
+      if (isVs())
+        remoteNumericLevelBadge->get()->moveTo(
+            remoteNumericLevelBadge->get()->getX(), NUMERIC_LEVEL_BADGE_Y);
+    }
 
     SPRITE_hide(arrowSelectors[ArrowDirection::CENTER]->get());
     TextStream::instance().scrollNow(0, TEXT_SCROLL_NORMAL);
@@ -764,8 +800,8 @@ void SelectionScene::setPage(u32 page, int direction) {
 }
 
 void SelectionScene::startPageCross(int direction) {
-  pendingAudio = "";
-  pendingSeek = 0;
+  syncer->pendingAudio = "";
+  syncer->pendingSeek = 0;
   this->isCrossingPage = 1;
   this->selected = direction < 0 ? PAGE_SIZE - 1 : 0;
   pixelBlink->blink();
@@ -793,7 +829,7 @@ void SelectionScene::loadChannels() {
 }
 
 void SelectionScene::loadProgress() {
-  progress->setValue(getCompletedSongs(), count);
+  progress->setValue(getSelectedSongIndex() + 1, count);
 
   for (u32 i = 0; i < PAGE_SIZE; i++) {
     auto songIndex = page * PAGE_SIZE + i;
@@ -816,12 +852,15 @@ void SelectionScene::setNames(std::string title, std::string artist) {
                                  TEXT_MIDDLE_COL - (artist.length() + 4) / 2);
 }
 
-void SelectionScene::printNumericLevel(Chart* chart, s8 offsetY) {
+void SelectionScene::printNumericLevel(Chart* chart,
+                                       Chart* remoteChart,
+                                       s8 offsetY) {
   if (IS_STORY(SAVEFILE_getGameMode()))
     return;
 
   if (numericLevels.empty()) {
-    SCENE_write("--", NUMERIC_LEVEL_ROW + offsetY);
+    SCENE_write(isVs() ? combineLevels("--", "--") : "--",
+                NUMERIC_LEVEL_ROW + offsetY);
     return;
   }
 
@@ -834,28 +873,55 @@ void SelectionScene::printNumericLevel(Chart* chart, s8 offsetY) {
       SCENE_write(std::string("  ") + chart->offsetLabel,
                   NUMERIC_LEVEL_ROW + 2);
     } else {
+      std::string variant = "";
       if (chart->variant != '\0')
-        SCENE_write(std::string("  ") + chart->variant, NUMERIC_LEVEL_ROW + 2);
+        variant = std::string("  ") + chart->variant;
+      if (remoteChart != NULL) {
+        std::string remoteVariant = "";
+        if (remoteChart->variant != '\0')
+          remoteVariant = std::string("  ") + remoteChart->variant;
+        variant = combineLevels(variant.empty() ? "   " : variant,
+                                remoteVariant.empty() ? "   " : remoteVariant,
+                                NUMERIC_LEVEL_BADGE_SEPARATOR_MINUS_ONE_SPACE);
+      }
+      if (!variant.empty())
+        SCENE_write(variant, NUMERIC_LEVEL_ROW + 2 - isVs());
     }
-
-    if (chart->difficulty == DifficultyLevel::NORMAL)
-      return SCENE_write("NM", NUMERIC_LEVEL_ROW + offsetY);
-
-    if (chart->difficulty == DifficultyLevel::HARD)
-      return SCENE_write("HD", NUMERIC_LEVEL_ROW + offsetY);
-
-    if (chart->difficulty == DifficultyLevel::CRAZY)
-      return SCENE_write("CZ", NUMERIC_LEVEL_ROW + offsetY);
-
-    if (chart->type == ChartType::DOUBLE_COOP_CHART)
-      return SCENE_write(";)", NUMERIC_LEVEL_ROW + offsetY);
   }
 
-  auto numericLevel = getSelectedNumericLevel();
-  auto levelText = numericLevel == 99 ? "??" : std::to_string(numericLevel);
+  std::string arcadeLevelString = "";
+  std::string remoteArcadeLevelString = "";
+
+  if (chart != NULL)
+    arcadeLevelString = chart->getArcadeLevelString();
+  if (remoteChart != NULL)
+    remoteArcadeLevelString = remoteChart->getArcadeLevelString();
+
+  if (arcadeLevelString.empty())
+    arcadeLevelString = formatNumericLevel(getSelectedNumericLevel());
+  if (isVs() && syncer->$remoteNumericLevelIndex != -1) {
+    if (remoteArcadeLevelString.empty())
+      remoteArcadeLevelString = formatNumericLevel(syncer->$remoteNumericLevel);
+    arcadeLevelString =
+        combineLevels(arcadeLevelString, remoteArcadeLevelString);
+  }
+
+  SCENE_write(arcadeLevelString, NUMERIC_LEVEL_ROW + offsetY);
+}
+
+std::string SelectionScene::combineLevels(std::string localLevel,
+                                          std::string remoteLevel,
+                                          std::string separator) {
+  return syncer->getLocalPlayerId() == 1 ? remoteLevel + separator + localLevel
+                                         : localLevel + separator + remoteLevel;
+}
+
+std::string SelectionScene::formatNumericLevel(int numericLevel) {
+  std::string levelText =
+      numericLevel == 99 ? "??" : std::to_string(numericLevel);
   if (levelText.size() == 1)
     levelText = "0" + levelText;
-  SCENE_write(levelText, NUMERIC_LEVEL_ROW + offsetY);
+  return levelText;
 }
 
 void SelectionScene::loadSelectedSongGrade() {
@@ -893,10 +959,7 @@ void SelectionScene::processMultiplayerUpdates() {
         }
 
         unconfirm();
-        if (syncer->$remoteNumericLevel != -1)
-          setNumericLevel(syncer->$remoteNumericLevel);
         scrollTo(payload);
-        syncer->$remoteNumericLevel = -1;
         pixelBlink->blink();
 
         syncer->clearTimeout();
@@ -906,13 +969,10 @@ void SelectionScene::processMultiplayerUpdates() {
         unconfirm();
         playNow(SOUND_STEP);
 
-        if (syncer->isMaster()) {
-          setNumericLevel(getSelectedNumericLevelIndex());
-          syncer->$remoteNumericLevel = payload;
-        } else {
+        if (isCoop())
           setNumericLevel(payload);
-          syncer->$remoteNumericLevel = payload;
-        }
+        else
+          setRemoteNumericLevel(payload);
 
         syncer->clearTimeout();
         break;
@@ -943,14 +1003,10 @@ void SelectionScene::syncNumericLevelChanged(u8 newValue) {
     return;
 
   syncer->send(SYNC_EVENT_LEVEL_CHANGED, newValue);
-  if (syncer->isMaster())
-    syncer->$remoteNumericLevel = -1;
-  else if (syncer->$remoteNumericLevel == -1)
-    syncer->$remoteNumericLevel = getSelectedNumericLevelIndex();
 }
 
 void SelectionScene::quit() {
-  player_stop();
+  stop();
   engine->transitionIntoScene(SEQUENCE_getMainScene(),
                               new PixelTransitionEffect());
 }

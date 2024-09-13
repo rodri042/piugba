@@ -4,7 +4,6 @@ const exec = util.promisify(childProcess.exec);
 const execSync = (...args) => {
   return { stdout: childProcess.execSync(...args) };
 };
-const readlineSync = require("readline-sync");
 const {
   printTableAndGetConsoleOutput,
 } = require("console-table-printer/dist/src/internalTable/internal-table-printer");
@@ -55,18 +54,6 @@ module.exports = {
   async processContent(content, action) {
     const func = GLOBAL_OPTIONS.fast ? chunkedProcessAsync : processSync;
     return await func(content, action);
-  },
-  insistentChoice(text, options, textColor = "black") {
-    const stringOptions = options.map((it) => `${it}`.toLowerCase());
-
-    let response = "";
-    const matches = (option) => _.startsWith(option, response);
-    while (response === "" || _.filter(stringOptions, matches).length !== 1)
-      response = readlineSync
-        .question(`${text}`[textColor].bgWhite + " ")
-        .toLowerCase();
-
-    return _.find(stringOptions, matches);
   },
   replaceRange(input, search, replace, start, end = input.length) {
     return (

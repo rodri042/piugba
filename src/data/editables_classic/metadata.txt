@@ -79,7 +79,7 @@ of:
 
 screen_song: 
 
-This screen uses colors from:
+This screen uses fg colors from:
   arrows+combo+numbers+feedback+lifebar
   105+10+30+60+64 = 269 (13 extra colors)
     -> these spritesheets are merges of classic&modern themes (in the `editables_merge` folder)
@@ -88,12 +88,18 @@ This screen uses colors from:
   
 ===
 
+Most UI screens use 253 bg colors, leaving 1 free color for the darkener and 2 free colors for the font.
+
 screen_selection:
 	Image -> Mode -> Indexed...
-		-> 251 colors
+		-> 250 colors (actually exported as 251, and converted to 250 via magick)
+		   ^ highlighter occupies 4 colors (250, 251, 252, and 253); 254 and 255 are free for text
+
+selector_bns: ^^^<<< Filters -> Edge-Detect -> Sobel...
+
 screen_controls:
 	Image -> Mode -> Indexed...
-		-> 254 colors
+		-> 253 colors
 		-> Color dithering: None
 
 ===

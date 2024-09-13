@@ -30,6 +30,7 @@ struct RewindState {
   u32 rate = 1;
   bool isInitializing = false;
   bool isRewinding = false;
+  bool isSavingPoint = false;
 };
 
 class SongScene : public Scene {
@@ -162,6 +163,7 @@ class SongScene : public Scene {
   void onStagePass();
   void onAbort();
   void breakStage();
+  void updateHighestLevel();
   void finishAndGoToEvaluation();
   void continueDeathMix();
 
@@ -176,7 +178,35 @@ class SongScene : public Scene {
   void endSeek(u32 previousMultiplier);
   bool seek(u32 msecs);
 
+  std::string buildLevelString();
+
   void unload();
+
+#ifdef SENV_DEVELOPMENT
+  u32 profsum = 0;
+  u32 profcount = 0;
+  void profileStart() {
+    REG_TM2CNT_L = 0;
+    REG_TM3CNT_L = 0;
+
+    REG_TM2CNT_H = 0;
+    REG_TM3CNT_H = 0;
+
+    REG_TM3CNT_H = TM_ENABLE | TM_CASCADE;
+    REG_TM2CNT_H = TM_ENABLE | TM_FREQ_1;
+  }
+  void profileStop() {
+    REG_TM2CNT_H = 0;
+    REG_TM3CNT_H = 0;
+
+    profsum += (REG_TM2CNT_L | (REG_TM3CNT_L << 16));
+    profcount++;
+  }
+  void profilePrint() {
+    if (profsum > 0)
+      log("AVG cycles: %d", profsum / profcount);
+  }
+#endif
 };
 
 #endif  // SONG_SCENE_H

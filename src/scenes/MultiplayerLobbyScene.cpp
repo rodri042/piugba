@@ -8,12 +8,15 @@
 #include "utils/SceneUtils.h"
 
 const std::string messages[] = {
-    "Connecting...\r\n\r\n(Press SELECT to cancel)",
+    "Connect a Link Cable or\r\na Wireless Adapter...\r\n\r\n(Press SELECT to "
+    "cancel)",
     "ERROR:\r\nwtf?!",
     "ERROR:\r\nToo many players!",
     "ERROR:\r\nROM IDs don't match!",
     "ERROR:\r\nMixed game modes!",
-    "Connecting...\r\n       [wireless / host]\r\n(Press SELECT to cancel)"};
+    "Connecting...\r\n                 [cable]\r\n\r\n(Press SELECT to cancel)",
+    "Connecting...\r\n       [wireless / host]\r\n\r\n(Press SELECT to "
+    "cancel)"};
 
 const u32 LOADING_INDICATOR_X = GBA_SCREEN_WIDTH - 16 - 4;
 const u32 LOADING_INDICATOR_Y = GBA_SCREEN_HEIGHT - 16 - 4;
@@ -72,8 +75,11 @@ void MultiplayerLobbyScene::tick(u16 keys) {
 
 void MultiplayerLobbyScene::refresh(int newMessageId) {
   if (newMessageId == 0 &&
-      linkUniversal->getProtocol() == LinkUniversal::Protocol::WIRELESS_SERVER)
+      linkUniversal->getProtocol() == LinkUniversal::Protocol::CABLE)
     newMessageId = 5;
+  if (newMessageId == 0 &&
+      linkUniversal->getProtocol() == LinkUniversal::Protocol::WIRELESS_SERVER)
+    newMessageId = 6;
 
   if (newMessageId != messageId) {
     messageId = newMessageId;

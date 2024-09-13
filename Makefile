@@ -4,10 +4,116 @@
 .SUFFIXES:
 
 # --- Paths ---
-export BASE_DIR = $(GBA_DIR)\projects\piugba
+export WORKDIR = $(PWD)
+export DEVKITARM = $(DEVKITPRO)/devkitARM
+export COMPILED_SPRITES_DIR := $(WORKDIR)/src/data/content/_compiled_sprites
+LAST_ENV_FILE := $(WORKDIR)/.last_env
+LAST_BUILDTYPE_FILE := $(WORKDIR)/.last_buildtype
 
-export TONCLIB := $(DEVKITPRO)/libtonc
-include  $(BASE_DIR)/tonc_rules
+export LIBTONC :=              $(DEVKITPRO)/libtonc
+export LIBGBA  :=              $(DEVKITPRO)/libgba
+export LIBGBA_SPRITE_ENGINE := $(WORKDIR)/libs/libgba-sprite-engine
+export LIBUGBA :=              $(WORKDIR)/libs/libugba
+
+# === TONC RULES ======================================================
+#
+# Yes, this is almost, but not quite, completely like to
+# DKP's base_rules and gba_rules
+#
+
+export PATH	:=	$(DEVKITARM)/bin:$(PATH)
+
+
+# --- Executable names ---
+
+PREFIX		?=	arm-none-eabi-
+
+export CC	:=	$(PREFIX)gcc
+export CXX	:=	$(PREFIX)g++
+export AS	:=	$(PREFIX)as
+export AR	:=	$(PREFIX)ar
+export NM	:=	$(PREFIX)nm
+export OBJCOPY	:=	$(PREFIX)objcopy
+
+# LD defined in Makefile
+
+
+# === LINK / TRANSLATE ================================================
+
+%.gba : %.elf
+	@$(OBJCOPY) -O binary $< $@
+	@echo built ... $(notdir $@)
+	@gbafix $@ -t$(TITLE)
+
+#----------------------------------------------------------------------
+
+%.mb.elf :
+	@echo Linking multiboot
+	$(LD) -specs=gba_mb.specs $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+	$(NM) -Sn $@ > $(basename $(notdir $@)).map
+
+#----------------------------------------------------------------------
+
+%.elf :
+	@echo Linking cartridge
+	$(LD) -specs=gba.specs $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+	$(NM) -Sn $@ > $(basename $(notdir $@)).map
+
+#----------------------------------------------------------------------
+
+%.a :
+	@echo $(notdir $@)
+	@rm -f $@
+	$(AR) -crs $@ $^
+
+
+# === OBJECTIFY =======================================================
+
+%.iwram.o : %.iwram.cpp
+	@echo $(notdir $<)
+	$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(CXXFLAGS) $(IARCH) -c $< -o $@
+
+#----------------------------------------------------------------------
+%.iwram.o : %.iwram.c
+	@echo $(notdir $<)
+	$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(CFLAGS) $(IARCH) -c $< -o $@
+
+#----------------------------------------------------------------------
+
+%.o : %.cpp
+	@echo $(notdir $<)
+	$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(CXXFLAGS) $(RARCH) -c $< -o $@
+
+#----------------------------------------------------------------------
+
+%.o : %.c
+	@echo $(notdir $<)
+	$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(CFLAGS) $(RARCH) -c $< -o $@
+
+#----------------------------------------------------------------------
+
+%.o : %.s
+	@echo $(notdir $<)
+	$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d -x assembler-with-cpp $(ASFLAGS) -c $< -o $@
+
+#----------------------------------------------------------------------
+
+%.o : %.S
+	@echo $(notdir $<)
+	$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d -x assembler-with-cpp $(ASFLAGS) -c $< -o $@
+
+
+#----------------------------------------------------------------------
+# canned command sequence for binary data
+#----------------------------------------------------------------------
+
+define bin2o
+	bin2s $< | $(AS) -o $(@)
+	echo "extern const u8" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`"_end[];" > `(echo $(<F) | tr . _)`.h
+	echo "extern const u8" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`"[];" >> `(echo $(<F) | tr . _)`.h
+	echo "extern const u32" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`_size";" >> `(echo $(<F) | tr . _)`.h
+endef
+# =====================================================================
 
 # --- Main path ---
 
@@ -60,7 +166,7 @@ SRCDIRS		:= src \
 						 libs
 DATADIRS	:=
 INCDIRS		:= src
-LIBDIRS		:= $(TONCLIB) $(LIBGBA) $(BASE_DIR)/libs/libgba-sprite-engine $(BASE_DIR)/libs/libugba
+LIBDIRS		:= $(LIBTONC) $(LIBGBA) $(LIBGBA_SPRITE_ENGINE) $(LIBUGBA)
 
 # --- switches ---
 
@@ -87,7 +193,15 @@ CFLAGS		+= -Wall
 CFLAGS		+= $(INCLUDE)
 CFLAGS		+= -ffast-math -fno-strict-aliasing
 
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -ffunction-sections -fdata-sections
+CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -ffunction-sections -fdata-sections -std=c++17 \
+	-DLINK_CABLE_QUEUE_SIZE=10 \
+	-DLINK_WIRELESS_QUEUE_SIZE=10 \
+	-DLINK_WIRELESS_MAX_SERVER_TRANSFER_LENGTH=6 \
+	-DLINK_WIRELESS_PUT_ISR_IN_IWRAM=1 \
+	-DLINK_WIRELESS_ENABLE_NESTED_IRQ=1 \
+	-DLINK_WIRELESS_USE_SEND_RECEIVE_LATCH=1 \
+	-DLINK_WIRELESS_TWO_PLAYERS_ONLY=1 \
+	-DLINK_DEVELOPMENT # (so gba-link-connection headers are not 'system headers' and partial builds include them)
 
 ASFLAGS		:= $(ARCH) $(INCLUDE)
 LDFLAGS 	:= $(ARCH) -Wl,--print-memory-usage,-Map,$(PROJ).map,--gc-sections
@@ -124,7 +238,7 @@ endif
 
 GAMETITLE=piuGBA
 GAMEMAKER=AGB
-GAMECODE=AZCE # Megaman Zero (SRAM - 64kb)
+GAMECODE=V49E # Drill Dozer (Rumble - SRAM - 32kb)
 MODE ?= auto
 SONGS ?= src/data/content/songs
 VIDEOLIB ?= src/data/content/piuGBA_videos
@@ -211,39 +325,70 @@ $(OUTPUT).gba	:	$(OUTPUT).elf
 
 $(OUTPUT).elf	:	$(OFILES)
 
+$(OFILES): $(COMPILED_SPRITES_DIR)/assets.stamp
+
 -include $(DEPENDS)
 
 endif		# End BUILD switch
 
 # --- More targets ----------------------------------------------------
 
-.PHONY: check-env clean assets start rebuild restart
+.PHONY: check-env install check clean assets build import pkg package start rebuild restart reimport
 
 check-env:
-ifndef GBA_DIR
-	$(warning Missing environment variable: GBA_DIR. See README.md)
+ifndef DEVKITPRO
+	$(warning Missing environment variable: DEVKITPRO. See README.md)
 	$(error "Aborting")
 endif
+	@if [ ! -f $(LAST_ENV_FILE) ]; then \
+			echo "Last environment unknown, running clean..."; \
+			echo $(ENV) > $(LAST_ENV_FILE); \
+			$(MAKE) clean; \
+	elif [ "$$(cat $(LAST_ENV_FILE))" != "$(ENV)" ]; then \
+			echo "Environment changed from $$(cat $(LAST_ENV_FILE)) to $(ENV), running clean..."; \
+			echo $(ENV) > $(LAST_ENV_FILE); \
+			$(MAKE) clean; \
+	fi
+	@if [ ! -f $(LAST_BUILDTYPE_FILE) ]; then \
+			echo "Last build type unknown, running clean..."; \
+			echo $(ARCADE) > $(LAST_BUILDTYPE_FILE); \
+			$(MAKE) clean; \
+	elif [ "$$(cat $(LAST_BUILDTYPE_FILE))" != "$(ARCADE)" ]; then \
+			echo "Build type changed from ARCADE=$$(cat $(LAST_BUILDTYPE_FILE)) to ARCADE=$(ARCADE), running clean..."; \
+			echo $(ARCADE) > $(LAST_BUILDTYPE_FILE); \
+			$(MAKE) clean; \
+	fi
+
+install: check-env
+	./scripts/importer/install.sh
+
+check: check-env
+	./scripts/toolchain/check.sh
 
 assets: check-env
 	./scripts/assets.sh
+	touch $(COMPILED_SPRITES_DIR)/assets.stamp
+
+# build: ...
 
 import: check-env
-	node ./scripts/importer/src/importer.js --mode "$(MODE)" --directory "$(SONGS)" --videolib="$(VIDEOLIB)" --hqaudiolib="$(HQAUDIOLIB)" --boss=$(BOSS) --arcade=$(ARCADE) --fast=$(FAST) --videoenable=$(VIDEOENABLE) --hqaudioenable=$(HQAUDIOENABLE)
+	./scripts/importer/run.sh --directory "$(SONGS)" --videolib="$(VIDEOLIB)" --hqaudiolib="$(HQAUDIOLIB)" --boss=$(BOSS) --arcade=$(ARCADE) --fast=$(FAST) --videoenable=$(VIDEOENABLE) --hqaudioenable=$(HQAUDIOENABLE)
 	cd src/data/content/_compiled_files && gbfs ../files.gbfs *
 
-package: check-env $(BUILD)
+pkg: check-env
 	./scripts/package.sh "piugba.gba" "src/data/content/files.gbfs"
 
+package: check-env build pkg
+
 start: check-env package
-	start "$(TARGET).out.gba"
+	@if command -v start > /dev/null; then \
+		start "$(TARGET).out.gba"; \
+	fi
 
 rebuild: check-env clean package
 
-restart: check-env rebuild
-	start "$(TARGET).out.gba"
+restart: check-env rebuild start
 
-reimport: check-env import package
-	start "$(TARGET).out.gba"
+reimport: check-env import package start
 
 # EOF

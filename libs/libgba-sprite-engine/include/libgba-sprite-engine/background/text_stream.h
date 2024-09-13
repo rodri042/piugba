@@ -26,6 +26,7 @@ class TextStream : public Background {
   void setText(const char* text, int row, int col);
 
   void setFontColor(COLOR color);
+  void setFontSubcolor(COLOR color);
   void setFontStyle(const void* data, int size);
 
   static TextStream& instance();

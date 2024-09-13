@@ -55,13 +55,13 @@ Playback PlaybackState;
 //           'timer =', 65536-(280896/i), '; buffer =',
 //           i, '; sample rate =', i*(1<<24)/280896, 'hz'
 //         );
-//   Playback rate can be changed: 0.86, 0.73, 0.47, 1, 1.11, 1.26, 1.54.
+//   Playback rate can be changed by +/- 13%, 26%, or 53%.
 // - In PCM s8 mode:
 //   Audio is taken from the flash cart's SD card (gba-flashcartio).
 //   The sample rate is 36314hz.
 //   Each PCM chunk is 304 bytes and represents 304 samples.
 //   Two chunks are copied per frame.
-//   Playback rate can be either 1 or 1.11.
+//   Playback rate can be either 1 or 1.13.
 
 static const int rate_delays[] = {1, 2, 4, 0, 4, 2, 1};
 static signed char rate_xfade[304];
@@ -105,6 +105,9 @@ static bool did_run = false;
             buffer[i] = (signed char)crossfaded_sample;                  \
           }                                                              \
         }                                                                \
+        if (src_pos >= src_len) {                                        \
+          ON_STOP;                                                       \
+        }                                                                \
       } else {                                                           \
         ON_STOP;                                                         \
       }                                                                  \
@@ -140,6 +143,9 @@ static bool did_run = false;
           *buffer++ = (last_sample + cur_sample) >> 9;                   \
           *buffer++ = cur_sample >> 8;                                   \
           last_sample = cur_sample;                                      \
+        }                                                                \
+        if (src_pos >= src_len) {                                        \
+          ON_STOP;                                                       \
         }                                                                \
       } else {                                                           \
         ON_STOP;                                                         \
@@ -253,7 +259,7 @@ INLINE void dsound_start_audio_copy(const void* source) {
                 DMA_ENABLE | 1;
 }
 
-INLINE void loadFile(const char* name, bool forceGSM) {
+INLINE void load_file(const char* name, bool forceGSM) {
   PlaybackState.msecs = 0;
   PlaybackState.hasFinished = false;
   PlaybackState.isLooping = false;
@@ -299,12 +305,12 @@ CODE_ROM void player_unload() {
 }
 
 CODE_ROM bool player_playSfx(const char* name) {
-  loadFile(name, active_flashcart == EZ_FLASH_OMEGA);
+  load_file(name, active_flashcart == EZ_FLASH_OMEGA);
   return is_pcm;
 }
 
 CODE_ROM bool player_play(const char* name, bool forceGSM) {
-  loadFile(name, forceGSM);
+  load_file(name, forceGSM);
   return is_pcm;
 }
 
@@ -355,7 +361,6 @@ CODE_ROM void player_stop() {
   rate = 0;
   rate_counter = 0;
   current_audio_chunk = 0;
-  is_pcm = false;
 }
 
 CODE_ROM bool player_isPlaying() {

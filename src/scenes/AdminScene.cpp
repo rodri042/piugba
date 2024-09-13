@@ -8,7 +8,7 @@
 #include "scenes/StartScene.h"
 #include "utils/SceneUtils.h"
 
-#define TITLE "ADMIN MENU (v1.10.0)"
+#define TITLE "ADMIN MENU (v1.11.0)"
 #define SUBMENU_RUMBLE 0
 #define SUBMENU_OFFSETS 1
 #define SUBMENU_RESET 2
@@ -25,7 +25,7 @@
 #define OPTION_RUMBLE 1
 #define OPTION_IO_BLINK 2
 #define OPTION_SRAM_BLINK 3
-#define OPTION_BACKGROUND_VIDEOS 4
+#define OPTION_HQ_MODE 4
 #define OPTION_EWRAM_OVERCLOCK 5
 #define OPTION_PS2_INPUT 6
 #define OPTION_RUMBLE_OPTS 7
@@ -126,7 +126,7 @@ void AdminScene::printOptions() {
   u8 rumble = SAVEFILE_read8(SRAM->adminSettings.rumble);
   u8 ioBlink = SAVEFILE_read8(SRAM->adminSettings.ioBlink);
   u8 sramBlink = SAVEFILE_read8(SRAM->adminSettings.sramBlink);
-  u8 backgroundVideos = SAVEFILE_read8(SRAM->adminSettings.backgroundVideos);
+  u8 hqMode = SAVEFILE_read8(SRAM->adminSettings.hqMode);
   u8 ewramOverclock = SAVEFILE_read8(SRAM->adminSettings.ewramOverclock);
   u8 ps2Input = SAVEFILE_read8(SRAM->adminSettings.ps2Input);
 
@@ -148,18 +148,17 @@ void AdminScene::printOptions() {
               : sramBlink == 2 ? "ON HIT"
                                : "OFF",
               8);
-  printOption(OPTION_BACKGROUND_VIDEOS, "HQ (audio / video)",
+  printOption(OPTION_HQ_MODE, "HQ (audio / video)",
               ps2Input > 0 ? "---"
-                           : (backgroundVideos == 3   ? "VIDEO"
-                              : backgroundVideos == 4 ? "AUDIO"
-                              : backgroundVideos > 0  ? "ALL"
-                                                      : "OFF"),
+                           : (hqMode == 3   ? "VIDEO"
+                              : hqMode == 4 ? "AUDIO"
+                              : hqMode > 0  ? "ALL"
+                                            : "OFF"),
               9);
-  printOption(
-      OPTION_EWRAM_OVERCLOCK, "EWRAM overclock",
-      ewramOverclock == 1 ? (backgroundVideos > 0 ? "*!*" : "ON") : "OFF", 10);
+  printOption(OPTION_EWRAM_OVERCLOCK, "EWRAM overclock",
+              ewramOverclock == 1 ? "ON" : "OFF", 10);
   printOption(OPTION_PS2_INPUT, "PS/2 input",
-              backgroundVideos > 0 ? "---" : (ps2Input > 0 ? "ON" : "OFF"), 11);
+              hqMode > 0 ? "---" : (ps2Input > 0 ? "ON" : "OFF"), 11);
 
   printOption(OPTION_RUMBLE_OPTS, "[RUMBLE OPTIONS]", "", 13);
   printOption(OPTION_CUSTOM_OFFSETS, "[CUSTOM OFFSETS]", "", 14);
@@ -178,21 +177,21 @@ bool AdminScene::selectOption(u32 selected, int direction) {
     switch (selected) {
       case 0: {
         SAVEFILE_write8(SRAM->adminSettings.rumbleFrames,
-                        1 + change(rumbleFrames - 1, 8, direction));
+                        1 + change(rumbleFrames - 1, 12, direction));
         return true;
       }
       case 1: {
-        SAVEFILE_write8(
-            SRAM->adminSettings.rumbleOpts,
-            RUMBLE_OPTS_BUILD(1 + change(rumblePreRollFrames - 1, 8, direction),
-                              rumbleIdleCyclePeriod));
+        SAVEFILE_write8(SRAM->adminSettings.rumbleOpts,
+                        RUMBLE_OPTS_BUILD(
+                            1 + change(rumblePreRollFrames - 1, 12, direction),
+                            rumbleIdleCyclePeriod));
         return true;
       }
       case 2: {
-        SAVEFILE_write8(SRAM->adminSettings.rumbleOpts,
-                        RUMBLE_OPTS_BUILD(rumblePreRollFrames,
-                                          2 + change(rumbleIdleCyclePeriod - 2,
-                                                     5, direction)));
+        SAVEFILE_write8(
+            SRAM->adminSettings.rumbleOpts,
+            RUMBLE_OPTS_BUILD(rumblePreRollFrames,
+                              change(rumbleIdleCyclePeriod, 7, direction)));
         return true;
       }
       case 3: {
@@ -336,43 +335,34 @@ bool AdminScene::selectOption(u32 selected, int direction) {
                       change(value, 3, direction));
       return true;
     }
-    case OPTION_BACKGROUND_VIDEOS: {
+    case OPTION_HQ_MODE: {
       u8 ps2Input = SAVEFILE_read8(SRAM->adminSettings.ps2Input);
       if (ps2Input > 0)
         return true;
 
-      u8 backgroundVideos =
-          SAVEFILE_read8(SRAM->adminSettings.backgroundVideos);
-      u8 updatedBackgroundVideos = change(backgroundVideos, 5, direction);
-      bool wasOn = backgroundVideos > 1;
-      bool isOn = updatedBackgroundVideos > 1;
+      u8 hqMode = SAVEFILE_read8(SRAM->adminSettings.hqMode);
+      u8 updatedHQMode = change(hqMode, 5, direction);
+      bool wasOn = hqMode > 1;
+      bool isOn = updatedHQMode > 1;
 
       if (wasOn && isOn) {
-        SAVEFILE_write8(SRAM->adminSettings.backgroundVideos,
-                        updatedBackgroundVideos);
+        SAVEFILE_write8(SRAM->adminSettings.hqMode, updatedHQMode);
         PlaybackState.isPCMDisabled =
-            static_cast<BackgroundVideosOpts>(updatedBackgroundVideos) ==
-            BackgroundVideosOpts::dVIDEO_ONLY;
+            static_cast<HQModeOpts>(updatedHQMode) == HQModeOpts::dVIDEO_ONLY;
         return true;
       } else {
         player_stop();
-        engine->transitionIntoScene(backgroundVideos > 0
-                                        ? SEQUENCE_deactivateVideo()
-                                        : SEQUENCE_activateVideo(true),
+        engine->transitionIntoScene(hqMode > 0 ? SEQUENCE_deactivateVideo()
+                                               : SEQUENCE_activateVideo(true),
                                     new PixelTransitionEffect());
 
         return false;
       }
     }
     case OPTION_EWRAM_OVERCLOCK: {
-      u8 backgroundVideos =
-          SAVEFILE_read8(SRAM->adminSettings.backgroundVideos);
       u8 ewramOverclock = SAVEFILE_read8(SRAM->adminSettings.ewramOverclock);
 
       if (ewramOverclock > 0) {
-        if (backgroundVideos > 0)
-          return true;
-
         player_stop();
         engine->transitionIntoScene(SEQUENCE_deactivateEWRAMOverclock(),
                                     new PixelTransitionEffect());
@@ -387,9 +377,8 @@ bool AdminScene::selectOption(u32 selected, int direction) {
       }
     }
     case OPTION_PS2_INPUT: {
-      u8 backgroundVideos =
-          SAVEFILE_read8(SRAM->adminSettings.backgroundVideos);
-      if (backgroundVideos > 0)
+      u8 hqMode = SAVEFILE_read8(SRAM->adminSettings.hqMode);
+      if (hqMode > 0)
         return true;
 
       u8 value = SAVEFILE_read8(SRAM->adminSettings.ps2Input);

@@ -131,7 +131,7 @@ CODE_IWRAM void ChartReader::processRhythmEvents() {
         if (type == EventType::SET_TEMPO) {
           u32 oldBpm = bpm;
           u32 scrollChangeFrames = event->param2 & 0xffff;
-          bpm = event->param;
+          bpm = event->bpm();
           scrollBpm = event->param2 >> 16;
           if (event->param2 == INFINITY) {
             scrollChangeFrames = 0;
@@ -140,10 +140,11 @@ CODE_IWRAM void ChartReader::processRhythmEvents() {
           autoVelocityFactor = event->param3;
 
           if (oldBpm != bpm) {
-            lastBpmChange = event->timestamp;
+            lastBpmChange = event->timestamp();
             lastBeat = -1;
             lastTick = 0;
-            beatDurationFrames = -1;
+            beatDurationFrames =
+                currentRate == 0 ? event->beatDurationFrames() : -1;
             beatFrame = 0;
             didSetInitialBpm = true;
           }
@@ -182,26 +183,26 @@ CODE_IWRAM void ChartReader::processNextEvents(int now) {
             if (arrowPool->isFull())
               return false;
 
-            processUniqueNote(event->timestamp, event->data, event->data2,
-                              event->isFake);
+            processUniqueNote(event->timestamp(), event->data(), event->data2,
+                              event->isFake());
             return true;
           }
           case EventType::HOLD_START: {
-            startHoldNote(event->timestamp, event->data, event->param, 0,
-                          event->isFake);
+            startHoldNote(event->timestamp(), event->data(), event->param, 0,
+                          event->isFake());
             if (chart->isDouble)
-              startHoldNote(event->timestamp, event->data2, event->param,
-                            ARROWS_TOTAL, event->isFake);
+              startHoldNote(event->timestamp(), event->data2, event->param,
+                            ARROWS_TOTAL, event->isFake());
             return true;
           }
           case EventType::HOLD_END: {
-            endHoldNote(event->timestamp, event->data);
+            endHoldNote(event->timestamp(), event->data());
             if (chart->isDouble)
-              endHoldNote(event->timestamp, event->data2, ARROWS_TOTAL);
+              endHoldNote(event->timestamp(), event->data2, ARROWS_TOTAL);
             return true;
           }
           default: {
-            if (now < event->timestamp || hasStopped)
+            if (now < event->timestamp() || hasStopped)
               return false;
           }
         }
@@ -209,7 +210,7 @@ CODE_IWRAM void ChartReader::processNextEvents(int now) {
         switch (type) {
           case EventType::STOP: {
             hasStopped = true;
-            stopStart = event->timestamp;
+            stopStart = event->timestamp();
             stopLength = event->param;
             stopAsync = event->param2;
             stopAsyncStoppedTime = event->param3;

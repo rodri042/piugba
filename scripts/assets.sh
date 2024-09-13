@@ -7,7 +7,7 @@ cd "$SOURCE"
 
 # [Setup]
 mkdir -p "$DESTINATION"
-rm $DESTINATION/*.h $DESTINATION/*.c
+rm $DESTINATION/*.h $DESTINATION/*.c > /dev/null 2>&1
 
 # SongScene
 grit \

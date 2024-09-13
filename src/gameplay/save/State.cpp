@@ -11,6 +11,9 @@ void STATE_setup(Song* song, Chart* chart) {
     gameMode = GameMode::ARCADE;
 
   GameState.mode = gameMode;
+  GameState.isShuffleMode =
+      gameMode == DEATH_MIX &&
+      (ENV_ARCADE || SAVEFILE_read8(SRAM->isShuffleMode) == 1);
   GameState.settings.audioLag = SAVEFILE_read32(SRAM->settings.audioLag);
   GameState.settings.gamePosition =
       static_cast<GamePosition>(SAVEFILE_read8(SRAM->settings.gamePosition));

@@ -1,46 +1,52 @@
-function try {
-  "$@"
-  local status=$?
+#!/bin/bash
+
+try() {
+  "$@" > /dev/null 2>&1
+  status=$?
   if [ $status -eq 127 ]; then
       echo "❌  $1" >&2
-      exit $?
+      exit $status
   fi
 }
 
-try gbfs > /dev/null
-try pngfix > /dev/null
-echo ""
+if [ -n "$NVM_DIR" ]; then
+  source $NVM_DIR/nvm.sh
+fi
+
+try gbfs
 echo "✔️  gbfs"
+
+try pngfix
 echo "✔️  pngfix"
 
-try rm --version > /dev/null
+try rm --version
 echo "✔️  rm"
 
-try dd --version > /dev/null
+try dd --version
 echo "✔️  dd"
 
-try md5sum --version > /dev/null
+try md5sum --version
 echo "✔️  md5sum"
 
-try cut --version > /dev/null
+try cut --version
 echo "✔️  cut"
 
-try ffmpeg -version > /dev/null
+try ffmpeg -version
 echo "✔️  ffmpeg"
 
-try ffplay -version > /dev/null
+try ffplay -version
 echo "✔️  ffplay"
 
-try magick -version > /dev/null
+try magick -version
 echo "✔️  magick"
 
-try grit > /dev/null
+try grit
 echo "✔️  grit"
 
-try make -version > /dev/null
+try make -version
 echo "✔️  make"
 
-try node -v > /dev/null
+try node -v
 echo "✔️  node"
 
 echo ""

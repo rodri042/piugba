@@ -3,6 +3,7 @@
 
 #include <libgba-sprite-engine/gba/tonc_core.h>
 
+#include <string>
 #include "Event.h"
 
 enum DifficultyLevel { NORMAL, HARD, CRAZY, NUMERIC };
@@ -29,6 +30,29 @@ typedef struct {
                   // type == ChartType::DOUBLE_COOP_CHART
   int customOffset;
   u8 levelIndex;
+
+  std::string getArcadeLevelString() {
+    if (difficulty == DifficultyLevel::NORMAL)
+      return "NM";
+
+    if (difficulty == DifficultyLevel::HARD)
+      return "HD";
+
+    if (difficulty == DifficultyLevel::CRAZY)
+      return "CZ";
+
+    if (type == ChartType::DOUBLE_COOP_CHART)
+      return ";)";
+
+    return "";
+  }
+
+  std::string getLevelString() {
+    return (type == ChartType::SINGLE_CHART   ? "s"
+            : type == ChartType::DOUBLE_CHART ? "d"
+                                              : "m") +
+           (level == 99 ? "??" : std::to_string(level));
+  }
 } Chart;
 
 #endif  // CHART_H

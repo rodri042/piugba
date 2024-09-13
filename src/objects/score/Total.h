@@ -9,7 +9,7 @@
 
 class Total {
  public:
-  Total(u32 x, u32 y, bool isFirst);
+  Total(u32 x, u32 y, bool has4Digits, bool isFirst);
 
   void setValue(u32 value);
   void render(std::vector<Sprite*>* sprites);

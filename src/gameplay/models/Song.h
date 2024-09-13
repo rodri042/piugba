@@ -61,6 +61,7 @@ Channel SONG_getChannel(const GBFS_FILE* fs,
                         DifficultyLevel difficultyLevel);
 u32 SONG_findChartIndexByDifficultyLevel(Song* song,
                                          DifficultyLevel difficultyLevel);
+int SONG_findSingleChartIndexByNumericLevel(Song* song, u8 numericLevel);
 Chart* SONG_findChartByDifficultyLevel(Song* song,
                                        DifficultyLevel difficultyLevel);
 u32 SONG_findChartIndexByNumericLevelIndex(Song* song,

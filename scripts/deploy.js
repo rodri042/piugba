@@ -2,13 +2,13 @@ const fs = require("fs");
 const childProcess = require("child_process");
 const $path = require("path");
 
+// Requires the `flips` command.
+
 const ROOT_DIR = $path.join(__dirname, "..");
-const CONTENT_DIR = $path.join(ROOT_DIR, "src/data/content");
+const CONTENT_DIR = "src/data/content";
 const SONG_PACKS_DIR = $path.join(CONTENT_DIR, "songs-pack");
 const ROM_PACKS_DIR = $path.join(CONTENT_DIR, "roms");
 const DEV_DIR = $path.join(CONTENT_DIR, "roms/#dev");
-const FLIPS_DIR = $path.join(__dirname, "toolchain/programs/flips");
-const FLIPS_TO_CONTENT_PATH = "../../../../src/data/content";
 const ROMNAME = "romname.txt";
 const ARCADE_SIGNAL = "ARCADE";
 const VARIANTS = ["arcade", "full"];
@@ -22,7 +22,19 @@ const OUTPUT_BUILDS = (variant) => ({
 const ARCADE_FLAG = (variant) => (variant === "arcade" ? "ARCADE=true" : "");
 const SEPARATOR = "----------";
 
-const SEARCH = process.argv[2];
+const MODE = process.argv[2];
+const SEARCH = process.argv[3];
+
+let make;
+if (MODE == "docker") make = "bash ./dockermake.sh";
+else if (MODE == "wsl") make = "bash ./wslmake.sh";
+else if (MODE == "native") make = "make";
+else {
+  console.log("Usage: node deploy.js <mode> [search]");
+  console.log("<mode>: docker | wsl | native");
+  console.log("[search]: ROM name");
+  process.exit(1);
+}
 
 const log = (text) => console.log(`${SEPARATOR}${text}${SEPARATOR}`);
 const run = (command, options) => {
@@ -32,16 +44,19 @@ const run = (command, options) => {
     ...options,
   });
 };
-const getPatches = () => {
+const getBaseBranchAndPatches = () => {
   try {
     const output = run("git --no-pager branch", {
       cwd: ROOT_DIR,
       stdio: null,
-    }).toString();
-    return output
-      .split("\n")
+    }).toString().split("\n");
+
+    const baseBranch = output.find((it) => it.trim().startsWith("* ")).replace("* ", "");
+    const patches = output
       .map((it) => it.trim().replace(/^\* /, ""))
       .filter((it) => it.startsWith("patch_"));
+
+    return [baseBranch, patches];
   } catch (e) {
     console.error("Failed to get patches", e);
     process.exit(1);
@@ -53,15 +68,15 @@ const getPatches = () => {
 // -----------
 
 if (!SEARCH) {
-  const patches = getPatches();
+  const [baseBranch, patches] = getBaseBranchAndPatches();
 
   VARIANTS.forEach((variant) => {
     ENVIRONMENTS.forEach((environment) => {
       log(`⌚  COMPILING: VARIANT=${variant}, ENV=${environment}`);
-      run("git checkout master", { cwd: ROOT_DIR });
-      run("make clean", { cwd: ROOT_DIR });
-      run("make assets", { cwd: ROOT_DIR });
-      run(`make build ENV="${environment}" ${ARCADE_FLAG(variant)}`, {
+      run(`git checkout ${baseBranch}`, { cwd: ROOT_DIR });
+      run(`${make} clean`, { cwd: ROOT_DIR });
+      run(`${make} assets`, { cwd: ROOT_DIR });
+      run(`${make} build ENV="${environment}" ${ARCADE_FLAG(variant)}`, {
         cwd: ROOT_DIR,
       });
       fs.copyFileSync(
@@ -80,16 +95,16 @@ if (!SEARCH) {
             `⌚  COMPILING: VARIANT=${variant}, ENV=${environment}, PATCH=${patch}`
           );
           run(`git checkout ${patch}`, { cwd: ROOT_DIR });
-          run("make clean", { cwd: ROOT_DIR });
-          run("make assets", { cwd: ROOT_DIR });
-          run(`make build ENV="${environment}" ${ARCADE_FLAG(variant)}`, {
+          run(`${make} clean`, { cwd: ROOT_DIR });
+          run(`${make} assets`, { cwd: ROOT_DIR });
+          run(`${make} build ENV="${environment}" ${ARCADE_FLAG(variant)}`, {
             cwd: ROOT_DIR,
           });
           fs.copyFileSync(
             $path.join(ROOT_DIR, OUTPUT_EMPTY),
             $path.join(CONTENT_DIR, outputName)
           );
-          run("git checkout master", { cwd: ROOT_DIR });
+          run(`git checkout ${baseBranch}`, { cwd: ROOT_DIR });
         });
       }
     });
@@ -108,9 +123,9 @@ if (!SEARCH) {
       );
 
       run(
-        `flips.exe --create --ips ${FLIPS_TO_CONTENT_PATH}/${cleanFile} ${FLIPS_TO_CONTENT_PATH}/${patchedFile} ${FLIPS_TO_CONTENT_PATH}/${patch}.${variant}.prod.ips`,
+        `flips --create --ips ${cleanFile} ${patchedFile} ${patch}.${variant}.prod.ips`,
         {
-          cwd: FLIPS_DIR,
+          cwd: CONTENT_DIR,
         }
       );
       run(`rm ${patchedFile}`, { cwd: CONTENT_DIR });
@@ -138,7 +153,8 @@ sources.forEach(({ name, path, variant }) => {
   const shortName = fs.readFileSync($path.join(path, ROMNAME)).toString();
   log(`⌚  IMPORTING: ${name} <<${shortName}>>`);
 
-  run(`make import SONGS="${path}" ${ARCADE_FLAG(variant)} FAST=true`, {
+  const unixPath = path.replace(/\\/g, "/");
+  run(`${make} import "SONGS=${unixPath}" ${ARCADE_FLAG(variant)} FAST=true`, {
     cwd: ROOT_DIR,
   });
 
@@ -147,7 +163,7 @@ sources.forEach(({ name, path, variant }) => {
       $path.join(CONTENT_DIR, OUTPUT_BUILDS(variant)[environment]),
       $path.join(ROOT_DIR, OUTPUT_EMPTY)
     );
-    run("make package", { cwd: ROOT_DIR });
+    run(`${make} pkg`, { cwd: ROOT_DIR });
     const outputName = `${prefix} piuGBA - ${shortName}.gba`;
     if (environment === "production") {
       fs.copyFileSync(

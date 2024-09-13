@@ -157,6 +157,7 @@ void CalibrateScene::processKeys(u16 keys) {
 
 void CalibrateScene::printTitle() {
   TextStream::instance().setFontColor(TEXT_COLOR);
+  TextStream::instance().setFontSubcolor(text_bg_palette_default_subcolor);
   TextStream::instance().clear();
 
   SCENE_write(TITLE, TEXT_ROW_TITLE);

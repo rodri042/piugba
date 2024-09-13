@@ -355,6 +355,7 @@ inline u32 SAVEFILE_initialize(const GBFS_FILE* fs) {
 
     SAVEFILE_write32(SRAM->lastNumericLevel, 0);
     SAVEFILE_write8(SRAM->isBonusMode, false);
+    SAVEFILE_write8(SRAM->isShuffleMode, false);
     SAVEFILE_write32(SRAM->randomSeed, 0);
 
     SAVEFILE_write8(

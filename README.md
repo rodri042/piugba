@@ -73,6 +73,7 @@ Charts are converted into a format created for this project called **PIUS**. The
 
 ## Install - Any OS (Docker)
 
+- If you are on Windows, install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install)
 - Install [Docker](https://www.docker.com/)
 - Run:
 ```bash

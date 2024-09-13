@@ -11,7 +11,7 @@ const u32 MESSAGE_LEN = 107;
 #define DATA_EWRAM __attribute__((section(".ewram")))
 #define MAX_EVENTS 3250
 #define ALLOCATION_SIZE (MAX_EVENTS * sizeof(Event))
-// (60000 bytes) -> (3000)*20
+// (65000 bytes) -> (3250)*20
 
 typedef struct {
   Event events[MAX_EVENTS];

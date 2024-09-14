@@ -239,6 +239,8 @@ void SongScene::tick(u16 keys) {
   updateScoresAndLifebars();
   updateRumble();
 
+  totalFrames++;
+
 #ifdef SENV_DEVELOPMENT
   if (chartReaders[0]->customOffset)
     scores[0]->log(chartReaders[0]->customOffset);
@@ -1401,12 +1403,9 @@ void SongScene::unload() {
 #endif
 
   u32 playTimeSeconds = SAVEFILE_read32(SRAM->stats.playTimeSeconds);
-  u32 addedPlayTime =
-      PlaybackState.msecs > 0 ? Div(PlaybackState.msecs, 1000) : 0;
-  if (addedPlayTime > 0) {
-    SAVEFILE_write32(SRAM->stats.playTimeSeconds,
-                     playTimeSeconds + addedPlayTime);
-  }
+  u32 addedPlayTime = Div(totalFrames, 60);
+  SAVEFILE_write32(SRAM->stats.playTimeSeconds,
+                   playTimeSeconds + addedPlayTime);
 
   player_stop();
   RUMBLE_stop();

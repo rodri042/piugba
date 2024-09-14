@@ -35,9 +35,9 @@ Button::Button(ButtonType type, u32 x, u32 y, bool reuseTiles) {
   if (type != ButtonType::LEVEL_METER && type != ButtonType::SUB_BUTTON_GRAY &&
       type != ButtonType::SUB_BUTTON_ORANGE)
     SPRITE_goToFrame(sprite.get(), type);
-  if (type == SUB_BUTTON_BLUE)
+  if (type == ButtonType::SUB_BUTTON_BLUE)
     SPRITE_goToFrame(sprite.get(), 0);
-  if (type == SUB_BUTTON_ORANGE)
+  if (type == ButtonType::SUB_BUTTON_ORANGE)
     SPRITE_goToFrame(sprite.get(), 4);
 }
 

@@ -180,9 +180,9 @@ void SongScene::load() {
 }
 
 void SongScene::tick(u16 keys) {
-#ifdef SENV_DEBUG
-  profileStart();
-#endif
+  // #ifdef SENV_DEVELOPMENT
+  //   profileStart();
+  // #endif
 
   if (engine->isTransitioning() || init < 2)
     return;
@@ -257,9 +257,9 @@ void SongScene::tick(u16 keys) {
   }
 #endif
 
-#ifdef SENV_DEBUG
-  profileStop();
-#endif
+  // #ifdef SENV_DEVELOPMENT
+  //   profileStop();
+  // #endif
 }
 
 void SongScene::render() {

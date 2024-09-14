@@ -243,6 +243,6 @@ If you've added new folders, ensure they're in `Makefile`'s `SRCDIRS` list!
 - GSM playback by [pinobatch/gsmplayer-gba](https://github.com/pinobatch/gsmplayer-gba): Feb 9, 2020
 - Interrupt handler by [AntonioND/libugba](https://github.com/AntonioND/libugba): Nov 14, 2022
 - LZ77 decompression by [Cult-of-GBA/BIOS](https://github.com/Cult-of-GBA/BIOS): Sep 11, 2024
-- Multiplayer support by [afska/gba-link-connection](https://github.com/afska/gba-link-connection): v7.0.0
+- Multiplayer support by [afska/gba-link-connection](https://github.com/afska/gba-link-connection): v7.0.1
 - microSD reading by [afska/gba-flashcartio](https://github.com/afska/gba-flashcartio): v1.0.5 + fixes
 - FAT parsing by [FatFS](http://elm-chan.org/fsw/ff/): R0.15

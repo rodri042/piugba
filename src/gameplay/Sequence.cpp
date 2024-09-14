@@ -65,7 +65,7 @@ Scene* SEQUENCE_getInitialScene() {
   }
 
   bool isPlaying = SAVEFILE_read8(SRAM->state.isPlaying);
-  bool isShuffleMode = ENV_ARCADE || (SAVEFILE_read8(SRAM->isShuffleMode) == 1);
+  bool isShuffleMode = ENV_ARCADE || SAVEFILE_read8(SRAM->isShuffleMode) == 1;
   auto gameMode = SAVEFILE_getGameMode();
   SAVEFILE_write8(SRAM->state.isPlaying, false);
 

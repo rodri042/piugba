@@ -95,6 +95,7 @@ class SongScene : public Scene {
   u32 lastDownLeftKeys = 0;
   u32 lastUpLeftKeys = 0;
   u32 lastCenterKeys = 0;
+  u32 totalFrames = 0;
   RewindState rewindState;
 
   inline void setUpGameConfig() {

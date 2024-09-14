@@ -172,8 +172,7 @@ void SettingsScene::close() {
   player_stop();
 
   if (SAVEFILE_getGameMode() == GameMode::DEATH_MIX) {
-    bool isShuffleMode =
-        ENV_ARCADE || (SAVEFILE_read8(SRAM->isShuffleMode) == 1);
+    bool isShuffleMode = ENV_ARCADE || SAVEFILE_read8(SRAM->isShuffleMode) == 1;
     engine->transitionIntoScene(
         new DeathMixScene(engine, fs, static_cast<MixMode>(isShuffleMode)),
         new PixelTransitionEffect());

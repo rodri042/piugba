@@ -191,6 +191,12 @@ class LinkUniversal {
    */
   [[nodiscard]] bool isConnected() { return state == CONNECTED; }
 
+  // [!]
+  [[nodiscard]] bool isConnectedAny() {
+    return mode == LINK_CABLE ? linkCable->isConnected()
+                              : linkWireless->isConnected();
+  }
+
   /**
    * @brief Returns the number of connected players (`0~5`).
    */

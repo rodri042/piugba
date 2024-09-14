@@ -265,13 +265,13 @@ StatsScene::ArcadePercentages StatsScene::getArcadeProgress() {
 
     for (u32 j = 0; j < song->chartCount; j++) {
       if (song->charts[j].type == ChartType::SINGLE_CHART) {
-        totalSingle++;
-        if (ARCADE_readSingle(song->id, j) < GradeType::UNPLAYED)
+        if (ARCADE_readSingle(song->id, totalSingle) < GradeType::UNPLAYED)
           completedSingle++;
+        totalSingle++;
       } else {
-        totalDouble++;
-        if (ARCADE_readDouble(song->id, j) < GradeType::UNPLAYED)
+        if (ARCADE_readDouble(song->id, totalDouble) < GradeType::UNPLAYED)
           completedDouble++;
+        totalDouble++;
       }
     }
 

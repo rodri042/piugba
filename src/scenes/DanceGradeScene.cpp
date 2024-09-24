@@ -315,21 +315,26 @@ u32 DanceGradeScene::getMultiplayerPointsOf(Evaluation* evaluation) {
 }
 
 void DanceGradeScene::updateStats() {
-  u32 passes = SAVEFILE_read32(SRAM->stats.stagePasses);
-  SAVEFILE_write32(SRAM->stats.stagePasses, passes + 1);
+  if (!GameState.isStatUpdatingDisabled()) {
+    u32 passes = SAVEFILE_read32(SRAM->stats.stagePasses);
+    SAVEFILE_write32(SRAM->stats.stagePasses, passes + 1);
 
-  GradeType gradeType = isVs() ? miniGrades[0]->getType() : grade->getType();
-  if (gradeType == GradeType::S) {
-    u32 sGrades = SAVEFILE_read32(SRAM->stats.sGrades);
-    SAVEFILE_write32(SRAM->stats.sGrades, sGrades + 1);
+    GradeType gradeType = isVs() ? miniGrades[0]->getType() : grade->getType();
+    if (gradeType == GradeType::S) {
+      u32 sGrades = SAVEFILE_read32(SRAM->stats.sGrades);
+      SAVEFILE_write32(SRAM->stats.sGrades, sGrades + 1);
+    }
   }
 
-  u32 newCombo = evaluation->maxCombo;
-  if (newCombo > MAX_COMBO)
-    newCombo = MAX_COMBO;
-  u32 maxCombo = SAVEFILE_read32(SRAM->stats.maxCombo);
-  if (newCombo > maxCombo) {
-    SAVEFILE_write32(SRAM->stats.maxCombo, newCombo);
+  if (!GameState.isStatUpdatingDisabled() ||
+      GameState.mode == GameMode::DEATH_MIX) {
+    u32 newCombo = evaluation->maxCombo;
+    if (newCombo > MAX_COMBO)
+      newCombo = MAX_COMBO;
+    u32 maxCombo = SAVEFILE_read32(SRAM->stats.maxCombo);
+    if (newCombo > maxCombo) {
+      SAVEFILE_write32(SRAM->stats.maxCombo, newCombo);
+    }
   }
 }
 

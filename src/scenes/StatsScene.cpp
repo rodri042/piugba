@@ -141,11 +141,12 @@ void StatsScene::printStats() {
   pixelBlink->blink();
   printFixedLine("Play time", playTime, 3);
   printFixedLine("Songs played", std::to_string(stagePasses + stageBreaks), 4);
-  printFixedLine("Stage breaks", std::to_string(stageBreaks), 5);
-  printFixedLine("Stage passes", std::to_string(stagePasses), 6);
+  printFixedLine("Stage passes", std::to_string(stagePasses), 5);
+  printFixedLine("Stage breaks", std::to_string(stageBreaks), 6);
   printFixedLine("S grades", std::to_string(sGrades), 7);
   printFixedLine("Max combo", std::to_string(maxCombo), 8);
   printFixedLine("Highest level", highestLevel, 9);
+
   if (!ENV_ARCADE) {
     printFixedLine("Campaign\\", campaignProgress, 11);
     printFixedLine("Campaign\\ (S)", campaignSClearProgress, 12);

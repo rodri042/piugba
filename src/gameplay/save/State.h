@@ -33,6 +33,10 @@ typedef struct {
   Mods mods;
   GameMode mode;
   bool isShuffleMode;
+
+  bool isStatUpdatingDisabled() {
+    return mods.isGradeSavingDisabled() || mode == GameMode::MULTI_VS;
+  }
 } RAMState;
 
 extern RAMState GameState;

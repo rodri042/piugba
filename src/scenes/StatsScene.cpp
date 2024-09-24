@@ -179,20 +179,19 @@ std::string StatsScene::getPlayTime() {
   u32 playTimeSeconds = SAVEFILE_read32(SRAM->stats.playTimeSeconds);
   std::string playTime = "";
 
-  u32 days, hours, minutes, seconds;
-  days = Div(playTimeSeconds, 86400);
-  playTimeSeconds = DivMod(playTimeSeconds, 86400);
+  u32 hours, minutes, seconds;
   hours = Div(playTimeSeconds, 3600);
   playTimeSeconds = DivMod(playTimeSeconds, 3600);
   minutes = Div(playTimeSeconds, 60);
   seconds = DivMod(playTimeSeconds, 60);
-  if (days > 0)
-    playTime += std::to_string(days) + "d ";
-  if (hours > 0 || days > 0)
+  if (hours > 0)
     playTime += std::to_string(hours) + "h ";
-  if (minutes > 0 || hours > 0 || days > 0)
+  if (minutes > 0 || hours > 0)
     playTime += std::to_string(minutes) + "m ";
   playTime += std::to_string(seconds) + "s";
+
+  if (playTime.size() > 14)
+    return "!!!";
 
   return playTime;
 }

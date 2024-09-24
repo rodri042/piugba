@@ -143,6 +143,9 @@ void StageBreakScene::setUpBackground() {
 }
 
 void StageBreakScene::updateStats() {
+  if (GameState.isStatUpdatingDisabled())
+    return;
+
   u32 breaks = SAVEFILE_read32(SRAM->stats.stageBreaks);
   SAVEFILE_write32(SRAM->stats.stageBreaks, breaks + 1);
 }

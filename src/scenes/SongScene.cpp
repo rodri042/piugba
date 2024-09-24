@@ -909,6 +909,9 @@ void SongScene::breakStage() {
 }
 
 void SongScene::updateHighestLevel() {
+  if (GameState.isStatUpdatingDisabled())
+    return;
+
   u32 rawHighestLevel = SAVEFILE_read32(SRAM->stats.highestLevel);
   u32 highestLevel = rawHighestLevel & 0xff;
   u32 highestType = (rawHighestLevel >> 16) & 0xff;
@@ -929,9 +932,11 @@ void SongScene::finishAndGoToEvaluation() {
   }
 
   auto evaluation = scores[localPlayerId]->evaluate();
-  bool isLastSong =
-      SAVEFILE_setGradeOf(song->index, chart->difficulty, song->id,
-                          chart->levelIndex, evaluation->getGrade());
+  bool isLastSong = false;
+
+  if (!$isMultiplayer || !lifeBars[localPlayerId]->getIsDead())
+    isLastSong = SAVEFILE_setGradeOf(song->index, chart->difficulty, song->id,
+                                     chart->levelIndex, evaluation->getGrade());
 
   updateHighestLevel();
   engine->transitionIntoScene(

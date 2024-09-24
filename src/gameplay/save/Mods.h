@@ -30,7 +30,7 @@ typedef struct __attribute__((__packed__)) {
 
   bool isGradeSavingDisabled() {
     return stageBreak == StageBreakOpts::sOFF ||
-           speedHack == SpeedHackOpts::hFIXED_VELOCITY ||
+           speedHack == SpeedHackOpts::hFIXED_VELOCITY || randomSteps ||
            trainingMode != TrainingModeOpts::tOFF;
   }
 } Mods;

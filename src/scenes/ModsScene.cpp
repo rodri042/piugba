@@ -151,7 +151,7 @@ void ModsScene::printOptions() {
                                   : "SILENT",
               14, true, "OFF");
 
-  if (stageBreak == 1 || speedHack == 2 || trainingMode > 0)
+  if (stageBreak == 1 || speedHack == 2 || randomSteps || trainingMode > 0)
     SCENE_write("! Grade saving OFF !", 15);
 
   printOption(OPTION_RESET, "        [RESET ALL]", "", 16);

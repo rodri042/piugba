@@ -1,4 +1,5 @@
 desktop.ini
+.DS_Store
 
 build/
 *.elf

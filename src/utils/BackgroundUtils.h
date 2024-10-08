@@ -43,7 +43,8 @@ inline std::unique_ptr<Background> BACKGROUND_loadBackgroundFiles(
     const GBFS_FILE* fs,
     const char* tilesFileName,
     const char* mapFileName,
-    int bgIndex) {
+    int bgIndex,
+    bool compressed = true) {
   u32 backgroundTilesLength, backgroundMapLength;
   auto backgroundTilesData =
       gbfs_get_obj(fs, tilesFileName, &backgroundTilesLength);
@@ -54,7 +55,7 @@ inline std::unique_ptr<Background> BACKGROUND_loadBackgroundFiles(
 
   return std::unique_ptr<Background>{
       new Background(bgIndex, backgroundTilesData, backgroundTilesLength,
-                     backgroundMapData, backgroundMapLength, true)};
+                     backgroundMapData, backgroundMapLength, compressed)};
 }
 
 inline void BACKGROUND_loadPalette(const unsigned int data[],

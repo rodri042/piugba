@@ -11,7 +11,7 @@ const SELECTOR_BNS_BMP = "selector_bns.bmp";
 const SELECTOR_OUTPUT_PNG = "output.bmp";
 const COMMAND_BUILD = "magick conjure msl:selector.msl || echo Done!";
 const COMMAND_ENCODE = (input) =>
-  `grit "${input}" -gzl -gt -gB8 -mRtf -mLs -ftb`;
+  `grit "${input}" -gt -gB8 -mRtf -mLs -ftb`;
 const COMMAND_CLEANUP = (tmpDir, tmpFile) =>
   `rm -rf "${tmpDir}" && rm "${tmpFile}"`;
 const EXTENSION_TMP = "h";

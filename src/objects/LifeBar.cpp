@@ -113,7 +113,7 @@ void LifeBar::tick(ForegroundPaletteManager* foregroundPalette) {
     animatedRainbowOffset = 0;
 }
 
-CODE_IWRAM void LifeBar::paint(ForegroundPaletteManager* foregroundPalette) {
+void LifeBar::paint(ForegroundPaletteManager* foregroundPalette) {
   bool isBorder = false;
 
   for (u32 i = 0; i < LIFEBAR_COLORS[isModern]; i++) {

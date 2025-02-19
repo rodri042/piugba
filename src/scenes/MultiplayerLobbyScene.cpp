@@ -36,7 +36,9 @@ void MultiplayerLobbyScene::load() {
       new Explosion(LOADING_INDICATOR_X, LOADING_INDICATOR_Y, false)};
 
   syncer->initialize(mode);
+#ifndef SENV_DEVELOPMENT
   refresh(0);
+#endif
 }
 
 void MultiplayerLobbyScene::tick(u16 keys) {
@@ -58,7 +60,19 @@ void MultiplayerLobbyScene::tick(u16 keys) {
     return;
   }
 
+#ifndef SENV_DEVELOPMENT
   refresh(syncer->getLastError());
+#else
+  TextStream::instance().setText(
+      "P" + std::to_string(linkUniversal->currentPlayerId()) + "/" +
+          std::to_string(linkUniversal->playerCount()) + " [" +
+          std::to_string((int)linkUniversal->getState()) + "]<" +
+          std::to_string((int)linkUniversal->getMode()) + ">(" +
+          std::to_string((int)linkUniversal->getWirelessState()) + ") w(" +
+          std::to_string(linkUniversal->_getWaitCount()) + ") sw(" +
+          std::to_string(linkUniversal->_getSubWaitCount()) + ")",
+      2, 0);
+#endif
 
 #ifdef SENV_DEBUG
   if (!hasStarted) {
@@ -69,7 +83,9 @@ void MultiplayerLobbyScene::tick(u16 keys) {
 #endif
 
 #ifndef SENV_DEBUG
+#ifndef SENV_DEVELOPMENT
   TextScene::tick(keys);
+#endif
 #endif
 }
 

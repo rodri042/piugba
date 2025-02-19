@@ -32,19 +32,25 @@ LinkUniversal* linkUniversal =
     new LinkUniversal(LinkUniversal::Protocol::AUTODETECT,
                       "piuGBA",
                       (LinkUniversal::CableOptions){
-                          .baudRate = LinkCable::BAUD_RATE_1,
-                          .timeout = SYNC_IRQ_TIMEOUT,
+                          .baudRate = LinkCable::BaudRate::BAUD_RATE_1,
+                          .timeout = SYNC_CABLE_TIMEOUT,
                           .interval = SYNC_SEND_INTERVAL,
                           .sendTimerId = LINK_CABLE_DEFAULT_SEND_TIMER_ID},
                       (LinkUniversal::WirelessOptions){
+                          .forwarding = true,
                           .retransmission = true,
                           .maxPlayers = 2,
-                          .timeout = SYNC_IRQ_TIMEOUT,
+                          .timeout = SYNC_WIRELESS_TIMEOUT,
                           .interval = SYNC_SEND_INTERVAL,
-                          .sendTimerId = LINK_WIRELESS_DEFAULT_SEND_TIMER_ID},
-                      __qran_seed);
+                          .sendTimerId = LINK_WIRELESS_DEFAULT_SEND_TIMER_ID});
 Syncer* syncer = new Syncer();
 static const GBFS_FILE* fs = find_first_gbfs_file(0);
+
+LINK_CODE_IWRAM void ISR_vblank() {
+  player_onVBlank();
+  if (linkUniversal->isActive())
+    LINK_UNIVERSAL_ISR_VBLANK();
+}
 
 int main() {
   linkUniversal->deactivate();
@@ -62,7 +68,6 @@ int main() {
   player_forever(
       []() {
         // (onUpdate)
-        LINK_UNIVERSAL_ISR_VBLANK();
         PS2_ISR_VBLANK();
 
         syncer->update();
@@ -144,19 +149,15 @@ void setUpInterrupts() {
   interrupt_init();
 
   // VBlank
-  interrupt_set_handler(INTR_VBLANK, player_onVBlank);
-  interrupt_enable(INTR_VBLANK);
+  interrupt_add(INTR_VBLANK, ISR_vblank);
 
   // LinkUniversal
-  interrupt_set_handler(INTR_SERIAL, LINK_UNIVERSAL_ISR_SERIAL);
-  interrupt_enable(INTR_SERIAL);
-  interrupt_set_handler(INTR_TIMER3, LINK_UNIVERSAL_ISR_TIMER);
-  interrupt_enable(INTR_TIMER3);
+  interrupt_add(INTR_SERIAL, LINK_UNIVERSAL_ISR_SERIAL);
+  interrupt_add(INTR_TIMER3, LINK_UNIVERSAL_ISR_TIMER);
 
   // A+B+START+SELECT
   REG_KEYCNT = 0b1100000000001111;
-  interrupt_set_handler(INTR_KEYPAD, ISR_reset);
-  interrupt_enable(INTR_KEYPAD);
+  interrupt_add(INTR_KEYPAD, ISR_reset);
 }
 
 inline void startRandomSeed() {
@@ -173,6 +174,7 @@ inline void stopRandomSeed() {
   __qran_seed += SAVEFILE_read32(SRAM->randomSeed);
   __qran_seed += (1 + (~REG_KEYS & KEY_ANY)) * 1664525 * REG_TM2CNT_L;
   SAVEFILE_write32(SRAM->randomSeed, __qran_seed);
+  Link::randomSeed = __qran_seed;
 }
 
 void synchronizeSongStart() {

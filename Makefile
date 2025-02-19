@@ -157,6 +157,8 @@ SRCDIRS		:= src \
 						 src/scenes/base \
 						 src/scenes/ui \
 						 src/utils \
+						 src/utils/gba-link-connection \
+						 src/utils/gba-link-connection/iwram_code \
 						 src/utils/gbfs \
 						 src/utils/flashcartio \
 						 src/utils/flashcartio/everdrivegbax5 \
@@ -195,12 +197,13 @@ CFLAGS		+= -ffast-math -fno-strict-aliasing
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -ffunction-sections -fdata-sections -std=c++17 \
 	-DLINK_CABLE_QUEUE_SIZE=10 \
-	-DLINK_WIRELESS_QUEUE_SIZE=10 \
+	-DLINK_WIRELESS_QUEUE_SIZE=20 \
 	-DLINK_WIRELESS_MAX_SERVER_TRANSFER_LENGTH=6 \
 	-DLINK_WIRELESS_PUT_ISR_IN_IWRAM=1 \
+	-DLINK_WIRELESS_PUT_ISR_IN_IWRAM_SERIAL_LEVEL="\"-Os\"" \
+	-DLINK_WIRELESS_PUT_ISR_IN_IWRAM_TIMER_LEVEL="\"-Os\"" \
 	-DLINK_WIRELESS_ENABLE_NESTED_IRQ=1 \
-	-DLINK_WIRELESS_USE_SEND_RECEIVE_LATCH=1 \
-	-DLINK_WIRELESS_TWO_PLAYERS_ONLY=1 \
+	-DLINK_UNIVERSAL_MAX_PLAYERS=2 \
 	-DLINK_DEVELOPMENT # (so gba-link-connection headers are not 'system headers' and partial builds include them)
 
 ASFLAGS		:= $(ARCH) $(INCLUDE)

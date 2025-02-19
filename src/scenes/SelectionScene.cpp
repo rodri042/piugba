@@ -159,7 +159,7 @@ void SelectionScene::load() {
 }
 
 void SelectionScene::tick(u16 keys) {
-  if (engine->isTransitioning() || init < 2)
+  if (engine->isTransitioning() || init < 3)
     return;
 
   if (SEQUENCE_isMultiplayerSessionDead()) {
@@ -225,8 +225,9 @@ void SelectionScene::render() {
   } else if (init == 1) {
     if (isDouble())
       SCENE_applyColorFilter(pal_obj_bank, ColorFilter::DOUBLE_FILTER);
-
     highlighter->initialize(selected);
+    init++;
+  } else if (init == 2) {
     EFFECT_setBlendAlpha(blendAlpha);
     EFFECT_render();
     BACKGROUND_enable(true, true, true, false);

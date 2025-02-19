@@ -273,6 +273,7 @@ INLINE void load_file(const char* name, bool forceGSM) {
     strcpy(fileName, name);
     strcat(fileName, ".aud.bin");
 
+    stop();
     bool success = audio_store_load(fileName);
     if (success) {
       is_pcm = true;
@@ -402,42 +403,42 @@ void player_forever(int (*onUpdate)(),
     // > multiplayer audio sync
     bool isSynchronized = expectedAudioChunk > 0;
     int availableAudioChunks = expectedAudioChunk - current_audio_chunk;
-    if (isSynchronized && availableAudioChunks > AUDIO_SYNC_LIMIT) {
-      // underrun (slave is behind master)
-      unsigned int diff = availableAudioChunks - AUDIO_SYNC_LIMIT;
+    bool skipped = false;
+    if (isSynchronized) {
+      if (availableAudioChunks > AUDIO_SYNC_LIMIT) {
+        // underrun (slave is behind master)
+        unsigned int diff = availableAudioChunks - AUDIO_SYNC_LIMIT;
 
-      src_pos += AUDIO_CHUNK_SIZE_GSM * diff;
-      current_audio_chunk += diff;
-      availableAudioChunks = AUDIO_SYNC_LIMIT;
+        src_pos += AUDIO_CHUNK_SIZE_GSM * diff;
+        current_audio_chunk += diff;
+        availableAudioChunks = AUDIO_SYNC_LIMIT;
+      } else if (availableAudioChunks < -AUDIO_SYNC_LIMIT) {
+        // overrun (master is behind slave)
+        skipped = true;
+      }
     }
 
     // > adjust position based on audio rate
     update_rate();
 
-    // > audio processing (back buffer)
-    AUDIO_PROCESS(
-        {
-          if (isSynchronized) {
-            availableAudioChunks--;
-
-            if (availableAudioChunks < -AUDIO_SYNC_LIMIT) {
-              // overrun (master is behind slave)
-              src_pos -= AUDIO_CHUNK_SIZE_GSM;
-              availableAudioChunks = -AUDIO_SYNC_LIMIT;
-            } else
-              current_audio_chunk++;
-          } else
+    if (!skipped) {
+      // > audio processing (back buffer)
+      AUDIO_PROCESS(
+          {
+            if (isSynchronized)
+              availableAudioChunks--;
             current_audio_chunk++;
-        },
-        {
-          if (PlaybackState.isLooping)
-            player_seek(0);
-          else {
-            player_stop();
-            PlaybackState.hasFinished = true;
-          }
-        },
-        { onError(); });
+          },
+          {
+            if (PlaybackState.isLooping)
+              player_seek(0);
+            else {
+              player_stop();
+              PlaybackState.hasFinished = true;
+            }
+          },
+          { onError(); });
+    }
 
     // > notify multiplayer audio sync cursor
     onAudioChunks(current_audio_chunk);

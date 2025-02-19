@@ -11,6 +11,12 @@ const u32 HOLD_ARROW_POOL_SIZE = 10;
 const u32 RANDOM_STEPS_MAX_RETRIES = 5;
 u8 RANDOM_STEPS_LAST_DATA = 0;
 
+#ifndef SENV_DEBUG
+#define CODE_PLACEMENT CODE_IWRAM
+#else
+#define CODE_PLACEMENT
+#endif
+
 ChartReader::ChartReader(Chart* chart,
                          u8 playerId,
                          ObjectPool<Arrow>* arrowPool,
@@ -41,7 +47,7 @@ ChartReader::ChartReader(Chart* chart,
   syncInitialScrollSpeed(multiplier);
 };
 
-CODE_IWRAM bool ChartReader::update(int songMsecs) {
+CODE_PLACEMENT bool ChartReader::update(int songMsecs) {
   int rhythmMsecs = songMsecs - rateAudioLag + customOffset - lastBpmChange;
   msecs =
       songMsecs - rateAudioLag + customOffset - (int)stoppedMs + (int)warpedMs;
@@ -70,7 +76,7 @@ CODE_IWRAM bool ChartReader::update(int songMsecs) {
   return processTicks(rhythmMsecs, true);
 }
 
-CODE_IWRAM int ChartReader::getYFor(Arrow* arrow) {
+CODE_PLACEMENT int ChartReader::getYFor(Arrow* arrow) {
   HoldArrow* holdArrow = arrow->getHoldArrow();
 
   int y;
@@ -113,7 +119,7 @@ CODE_IWRAM int ChartReader::getYFor(Arrow* arrow) {
   return min(y, ARROW_INITIAL_Y);
 }
 
-CODE_IWRAM int ChartReader::getYFor(int timestamp) {
+CODE_PLACEMENT int ChartReader::getYFor(int timestamp) {
   // arrowTime ms           -> ARROW_DISTANCE() px
   // timeLeft ms            -> x = timeLeft * ARROW_DISTANCE() / arrowTime
   int now = hasStopped ? stopStart : msecs;
@@ -123,7 +129,7 @@ CODE_IWRAM int ChartReader::getYFor(int timestamp) {
              ARROW_INITIAL_Y);
 }
 
-CODE_IWRAM void ChartReader::processRhythmEvents() {
+CODE_PLACEMENT void ChartReader::processRhythmEvents() {
   processEvents(
       chart->rhythmEvents, chart->rhythmEventCount, rhythmEventIndex,
       msecs + (int)asyncStoppedMs,
@@ -174,7 +180,7 @@ CODE_IWRAM void ChartReader::processRhythmEvents() {
       });
 }
 
-CODE_IWRAM void ChartReader::processNextEvents(int now) {
+CODE_PLACEMENT void ChartReader::processNextEvents(int now) {
   processEvents(
       chart->events, chart->eventCount, eventIndex, now + arrowTime,
       [&now, this](EventType type, Event* event, bool* stop) {
@@ -233,10 +239,10 @@ CODE_IWRAM void ChartReader::processNextEvents(int now) {
       });
 }
 
-CODE_IWRAM void ChartReader::processUniqueNote(int timestamp,
-                                               u8 data,
-                                               u8 param,
-                                               bool isFake) {
+CODE_PLACEMENT void ChartReader::processUniqueNote(int timestamp,
+                                                   u8 data,
+                                                   u8 param,
+                                                   bool isFake) {
   if (GameState.mods.randomSteps)
     data = getRandomStep(timestamp, data);
 
@@ -267,11 +273,11 @@ CODE_IWRAM void ChartReader::processUniqueNote(int timestamp,
   connectArrows(arrows);
 }
 
-CODE_IWRAM void ChartReader::startHoldNote(int timestamp,
-                                           u8 data,
-                                           u32 length,
-                                           u8 offset,
-                                           bool isFake) {
+CODE_PLACEMENT void ChartReader::startHoldNote(int timestamp,
+                                               u8 data,
+                                               u32 length,
+                                               u8 offset,
+                                               bool isFake) {
   if (GameState.mods.randomSteps) {
     // (when using random steps, hold notes are converted to unique notes)
     return processUniqueNote(timestamp, getRandomStep(timestamp, data), 0,
@@ -310,7 +316,9 @@ CODE_IWRAM void ChartReader::startHoldNote(int timestamp,
   });
 }
 
-CODE_IWRAM void ChartReader::endHoldNote(int timestamp, u8 data, u8 offset) {
+CODE_PLACEMENT void ChartReader::endHoldNote(int timestamp,
+                                             u8 data,
+                                             u8 offset) {
   if (GameState.mods.randomSteps)
     return;
 
@@ -330,7 +338,7 @@ CODE_IWRAM void ChartReader::endHoldNote(int timestamp, u8 data, u8 offset) {
   });
 }
 
-CODE_IWRAM void ChartReader::orchestrateHoldArrows() {
+CODE_PLACEMENT void ChartReader::orchestrateHoldArrows() {
   holdArrows->forEachActive([this](HoldArrow* holdArrow) {
     ArrowDirection direction = holdArrow->direction;
     bool hasStarted = holdArrow->hasStarted(msecs);
@@ -385,8 +393,8 @@ CODE_IWRAM void ChartReader::orchestrateHoldArrows() {
   });
 }
 
-CODE_IWRAM bool ChartReader::processTicks(int rhythmMsecs,
-                                          bool checkHoldArrows) {
+CODE_PLACEMENT bool ChartReader::processTicks(int rhythmMsecs,
+                                              bool checkHoldArrows) {
   if (bpm == 0)
     return false;
 
@@ -434,7 +442,7 @@ CODE_IWRAM bool ChartReader::processTicks(int rhythmMsecs,
   return isNewBeat;
 }
 
-CODE_IWRAM void ChartReader::connectArrows(std::vector<Arrow*>& arrows) {
+CODE_PLACEMENT void ChartReader::connectArrows(std::vector<Arrow*>& arrows) {
   if (arrows.size() <= 1)
     return;
 
@@ -443,7 +451,7 @@ CODE_IWRAM void ChartReader::connectArrows(std::vector<Arrow*>& arrows) {
   }
 }
 
-CODE_IWRAM int ChartReader::getFillTopY(HoldArrow* holdArrow) {
+CODE_PLACEMENT int ChartReader::getFillTopY(HoldArrow* holdArrow) {
   int firstFillOffset = HOLD_getFirstFillOffset(holdArrow->direction);
 
   int y = holdArrow->getHeadY(
@@ -451,7 +459,7 @@ CODE_IWRAM int ChartReader::getFillTopY(HoldArrow* holdArrow) {
   return y + firstFillOffset;
 }
 
-CODE_IWRAM int ChartReader::getFillBottomY(HoldArrow* holdArrow, int topY) {
+CODE_PLACEMENT int ChartReader::getFillBottomY(HoldArrow* holdArrow, int topY) {
   int lastFillOffset = HOLD_getLastFillOffset(holdArrow->direction);
 
   return holdArrow->getTailY([holdArrow, &topY, &lastFillOffset, this]() {

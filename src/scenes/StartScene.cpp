@@ -120,7 +120,7 @@ void StartScene::load() {
 }
 
 void StartScene::tick(u16 keys) {
-  if (engine->isTransitioning() || !hasStarted)
+  if (engine->isTransitioning() || init < 3)
     return;
 
   __qran_seed += (1 + keys) * REG_VCOUNT;
@@ -147,14 +147,19 @@ void StartScene::render() {
   if (engine->isTransitioning())
     return;
 
-  if (!hasStarted) {
+  if (init == 0) {
+    init++;
+    return;
+  } else if (init == 1) {
     darkener->initialize(BackgroundType::FULL_BGA_DARK, DARKENER_COLOR_INDEX);
+    init++;
+  } else if (init == 2) {
     printTitle();
     BACKGROUND_enable(true, true, true, false);
     SPRITE_enable();
     player_playSfx(SOUND_LOOP);
     player_enableLoop();
-    hasStarted = true;
+    init++;
   }
 }
 

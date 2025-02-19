@@ -31,7 +31,7 @@ class StartScene : public Scene {
   void render() override;
 
  private:
-  bool hasStarted = false;
+  u32 init = 0;
   std::unique_ptr<Background> bg;
   std::unique_ptr<PixelBlink> pixelBlink;
   const GBFS_FILE* fs;

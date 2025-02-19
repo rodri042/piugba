@@ -78,7 +78,7 @@ void Syncer::directSend(u16 data) {
     return;
 
   bool success = false;
-  while (!success && linkUniversal->isConnectedAny())
+  while (!success && linkUniversal->isConnectedNow())
     success = linkUniversal->send(data);
 }
 

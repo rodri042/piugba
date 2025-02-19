@@ -95,7 +95,7 @@ if (!SEARCH) {
             `⌚  COMPILING: VARIANT=${variant}, ENV=${environment}, PATCH=${patch}`
           );
           run(`git checkout ${patch}`, { cwd: ROOT_DIR });
-          run(`${make} clean`, { cwd: ROOT_DIR });
+          // run(`${make} clean`, { cwd: ROOT_DIR }); // (faster builds!)
           run(`${make} assets`, { cwd: ROOT_DIR });
           run(`${make} build ENV="${environment}" ${ARCADE_FLAG(variant)}`, {
             cwd: ROOT_DIR,

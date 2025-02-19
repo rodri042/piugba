@@ -153,6 +153,7 @@ void StartScene::render() {
   } else if (init == 1) {
     darkener->initialize(BackgroundType::FULL_BGA_DARK, DARKENER_COLOR_INDEX);
     init++;
+    return;
   } else if (init == 2) {
     printTitle();
     BACKGROUND_enable(true, true, true, false);

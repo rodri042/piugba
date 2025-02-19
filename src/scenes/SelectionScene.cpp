@@ -228,6 +228,7 @@ void SelectionScene::render() {
       SCENE_applyColorFilter(pal_obj_bank, ColorFilter::DOUBLE_FILTER);
     highlighter->initialize(selected);
     init++;
+    return;
   } else if (init == 2) {
     EFFECT_setBlendAlpha(blendAlpha);
     EFFECT_render();

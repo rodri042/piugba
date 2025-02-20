@@ -56,7 +56,8 @@ int main() {
   linkUniversal->deactivate();
   RUMBLE_init();
 
-  REG_WAITCNT = 0x4317;  // (3,1 waitstates, prefetch ON)
+  // REG_WAITCNT = 0x4317;  // (3,1 waitstates, prefetch ON)
+  REG_WAITCNT = 0x4303;  // (4,2 waitstates, prefetch ON)
 
   validateBuild();
   setUpInterrupts();
